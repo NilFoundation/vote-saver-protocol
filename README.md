@@ -1,6 +1,6 @@
-# [Jens Groth Construction](https://eprint.iacr.org/2016/260.pdf) Proof Verification Example
+# TVM [Jens Groth Construction](https://eprint.iacr.org/2016/260.pdf) Proof Verification Example
 
-This example is a simple contract which allows to verify Groth16 zk-SNARK proof.
+This example is a simple contract which allows to verify Groth16 zk-SNARK proof using TVM.
 
 ## Methods
 This contract has four methods.

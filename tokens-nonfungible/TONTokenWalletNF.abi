@@ -1,0 +1,181 @@
+{
+  "ABI version": 2,
+  "header": [
+    "pubkey",
+    "time",
+    "expire"
+  ],
+  "functions": [
+  {
+    "name": "constructor",
+    "inputs": [
+    { "name":"name", "type":"bytes" },
+    { "name":"symbol", "type":"bytes" },
+    { "name":"decimals", "type":"uint8" },
+    { "name":"root_public_key", "type":"uint256" },
+    { "name":"wallet_public_key", "type":"uint256" },
+    { "name":"root_address", "type":"address" },
+    { "name":"code", "type":"cell" }
+    ],
+    "outputs": [
+    ],
+    "id": "0xb"
+  },
+  {
+    "name": "transfer",
+    "inputs": [
+    { "name":"dest", "type":"address" },
+    { "name":"tokenId", "type":"uint128" },
+    { "name":"grams", "type":"uint128" }
+    ],
+    "outputs": [
+    ],
+    "id": "0xc"
+  },
+  {
+    "name": "accept",
+    "inputs": [
+    { "name":"tokenId", "type":"uint128" }
+    ],
+    "outputs": [
+    ],
+    "id": "0xd"
+  },
+  {
+    "name": "internalTransfer",
+    "inputs": [
+    { "name":"tokenId", "type":"uint128" },
+    { "name":"pubkey", "type":"uint256" }
+    ],
+    "outputs": [
+    ],
+    "id": "0xe"
+  },
+  {
+    "name": "getName",
+    "inputs": [
+    ],
+    "outputs": [
+    { "name":"value0", "type":"bytes" }
+    ],
+    "id": "0xf"
+  },
+  {
+    "name": "getSymbol",
+    "inputs": [
+    ],
+    "outputs": [
+    { "name":"value0", "type":"bytes" }
+    ],
+    "id": "0x10"
+  },
+  {
+    "name": "getDecimals",
+    "inputs": [
+    ],
+    "outputs": [
+    { "name":"value0", "type":"uint8" }
+    ],
+    "id": "0x11"
+  },
+  {
+    "name": "getBalance",
+    "inputs": [
+    ],
+    "outputs": [
+    { "name":"value0", "type":"uint128" }
+    ],
+    "id": "0x12"
+  },
+  {
+    "name": "getWalletKey",
+    "inputs": [
+    ],
+    "outputs": [
+    { "name":"value0", "type":"uint256" }
+    ],
+    "id": "0x13"
+  },
+  {
+    "name": "getRootAddress",
+    "inputs": [
+    ],
+    "outputs": [
+    { "name":"value0", "type":"address" }
+    ],
+    "id": "0x14"
+  },
+  {
+    "name": "allowance",
+    "inputs": [
+    ],
+    "outputs": [
+    { "name":"spender", "type":"address" },
+    { "name":"allowedToken", "type":"uint128" }
+    ],
+    "id": "0x15"
+  },
+  {
+    "name": "getTokenByIndex",
+    "inputs": [
+    { "name":"index", "type":"uint128" }
+    ],
+    "outputs": [
+    { "name":"value0", "type":"uint128" }
+    ],
+    "id": "0x16"
+  },
+  {
+    "name": "getApproved",
+    "inputs": [
+    { "name":"tokenId", "type":"uint128" }
+    ],
+    "outputs": [
+    { "name":"value0", "type":"address" }
+    ],
+    "id": "0x17"
+  },
+  {
+    "name": "approve",
+    "inputs": [
+    { "name":"spender", "type":"address" },
+    { "name":"tokenId", "type":"uint128" }
+    ],
+    "outputs": [
+    ],
+    "id": "0x18"
+  },
+  {
+    "name": "transferFrom",
+    "inputs": [
+    { "name":"dest", "type":"address" },
+    { "name":"to", "type":"address" },
+    { "name":"tokenId", "type":"uint128" },
+    { "name":"grams", "type":"uint128" }
+    ],
+    "outputs": [
+    ],
+    "id": "0x19"
+  },
+  {
+    "name": "internalTransferFrom",
+    "inputs": [
+    { "name":"to", "type":"address" },
+    { "name":"tokenId", "type":"uint128" }
+    ],
+    "outputs": [
+    ],
+    "id": "0x1a"
+  },
+  {
+    "name": "disapprove",
+    "inputs": [
+    ],
+    "outputs": [
+    ],
+    "id": "0x1b"
+  }
+  ],
+  "events": [
+  ]
+}

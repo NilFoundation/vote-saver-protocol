@@ -1,14 +1,16 @@
-# TVM [Jens Groth Construction](https://eprint.iacr.org/2016/260.pdf) Proof Verification Example
+# TON Proof Verification Contest.
+
+## `VERGRTH16` usage example
 
 This example is a simple contract which allows to verify Groth16 zk-SNARK proof using TVM.
 
-## Methods
-This contract has four methods.
+### Methods
+This contract has two methods.
 * `verification::constructor()` - method run on the contract's deploy.
 * `bool verification::verify(slice proof)` - proof packed into a slice with an
     inner format defined as follows.
 
-## Input format
+### Input format
 
 zk-SNARK verifier `slice proof` argument contains of 3 parts packed together:
 * `verification_key_type vk`

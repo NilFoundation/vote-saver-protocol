@@ -9,7 +9,7 @@
   {
     "name": "constructor",
     "inputs": [
-        { "name":"proof_msg_bytes", "type":"bytes" }
+    { "name":"proof_msg_bytes", "type":"bytes" }
     ],
     "outputs": [
     ],

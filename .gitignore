@@ -6,8 +6,6 @@ cli_build/*
 build-clang/*
 build-gcc/*
 Makefile
-bin/*
-lib/*
 manual
 *.swp
 bii/*

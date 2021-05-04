@@ -1,0 +1,24 @@
+[submodule "cmake/modules"]
+	path = cmake/modules
+	url = git@github.com:BoostCMake/cmake_modules.git
+[submodule "libs/multiprecision"]
+	path = libs/multiprecision
+	url = git@github.com:nilfoundation/crypto3-multiprecision.git
+[submodule "libs/algebra"]
+	path = libs/algebra
+	url = git@github.com:nilfoundation/crypto3-algebra.git
+[submodule "libs/zk"]
+	path = libs/zk
+	url = git@github.com:nilfoundation/crypto3-zk.git
+[submodule "libs/blueprint"]
+	path = libs/blueprint
+	url = git@github.com:nilfoundation/crypto3-blueprint.git
+[submodule "libs/fft"]
+	path = libs/fft
+	url = git@github.com:nilfoundation/crypto3-fft.git
+[submodule "libs/block"]
+	path = libs/block
+	url = git@github.com:nilfoundation/crypto3-block.git
+[submodule "libs/hash"]
+	path = libs/hash
+	url = git@github.com:nilfoundation/crypto3-hash

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <tvm/replay_attack_protection/timestamp.hpp>
+
 namespace tvm {
     namespace schema {
 

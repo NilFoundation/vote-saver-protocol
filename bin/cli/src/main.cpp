@@ -14,11 +14,29 @@
 // limitations under the License.
 //---------------------------------------------------------------------------//
 
-#include <ctime>
-#include <set>
+#include <iostream>
+#include <string>
 
 #include <boost/program_options.hpp>
 
 int main(int argc, char *argv[]) {
+    std::string out;
+    boost::program_options::options_description options(
+        "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
+        "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator");
+
+    options.add_options()("help,h", "Display help message")(
+        "version,v",
+        "Display version")("input,i", boost::program_options::value<std::string>(&out)->default_value("output.proof"));
+
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(options).run(), vm);
+    boost::program_options::notify(vm);
+
+    if (vm.count("help") || argc < 2) {
+        std::cout << options << std::endl;
+        return 0;
+    }
+
     return 0;
 }

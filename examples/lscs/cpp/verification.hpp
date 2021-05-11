@@ -9,16 +9,13 @@ namespace tvm {
         __interface iverificator {
 
             // expected offchain constructor execution
-            __attribute__((internal, external, dyn_chain_parse)) void constructor(bytes proof_msg_bytes) = 11;
+            __attribute__((internal, external, dyn_chain_parse)) void constructor() = 11;
 
-            __attribute__((getter)) bool_t verify() = 12;
+            __attribute__((getter)) bool_t verify(bytes proof_msg_bytes) = 12;
         };
 
-        struct dverificator {
-            cell proof_msg_;
-        };
+        struct dverificator { };
 
         struct everificator { };
     }    // namespace schema
 }    // namespace tvm
-

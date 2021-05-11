@@ -14,12 +14,11 @@ class verificator final : public smart_interface<iverificator>, public dverifica
 public:
     using root_replay_protection_t = replay_attack_protection::timestamp<ROOT_TIMESTAMP_DELAY>;
 
-    __always_inline void constructor(bytes proof_msg_bytes) {
-        proof_msg_ = proof_msg_bytes.cl_;
+    __always_inline void constructor() {
     }
 
-    __always_inline bool_t verify() {
-        return (__builtin_tvm_vergrth16(proof_msg_) > 0) ? bool_t(1) : bool_t(0);
+    __always_inline bool_t verify(bytes proof_msg_bytes) {
+        return (__builtin_tvm_vergrth16(proof_msg_bytes.cl_) > 0) ? bool_t(1) : bool_t(0);
     }
 
     // default processing of unknown messages
@@ -35,4 +34,3 @@ DEFINE_JSON_ABI(iverificator, dverificator, everificator);
 
 // ----------------------------- Main entry functions ---------------------- //
 DEFAULT_MAIN_ENTRY_FUNCTIONS(verificator, iverificator, dverificator, ROOT_TIMESTAMP_DELAY)
-

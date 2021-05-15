@@ -1,5 +1,6 @@
 #---------------------------------------------------------------------------#
 # Copyright (c) 2018-2021 Mikhail Komarov <nemo@nil.foundation>
+# Copyright (c) 2020 Nikita Kaskov <nbering@nil.foundation>
 #
 # Distributed under the Boost Software License, Version 1.0
 # See accompanying file LICENSE_1_0.txt or copy at
@@ -36,9 +37,12 @@ macro(cm_find_package NAME)
     endif()
 endmacro()
 
+option(BUILD_TESTS "Build unit tests" TRUE)
+
 if(NOT Boost_FOUND)
     cm_find_package(Boost REQUIRED COMPONENTS program_options system)
 endif()
 
-add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs")
+add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs"
+                   SUBMODULE_DEFINITION_HEADER "cm_project\\(")
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/bin")

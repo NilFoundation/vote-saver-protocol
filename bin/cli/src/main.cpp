@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
 
     options.add_options()("help,h", "Display help message");
     options.add_options()("version,v", "Display version");
-    options.add_options()("input,i", boost::program_options::value<std::string>(&out)->default_value("output.proof"));
+    options.add_options()("output,o", boost::program_options::value<std::string>(&out)->default_value("proof"));
 
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(options).run(), vm);

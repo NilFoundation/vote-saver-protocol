@@ -19,15 +19,34 @@
 
 #include <boost/program_options.hpp>
 
+#include <nil/crypto3/algebra/curves/bls12.hpp>
+
+#include <nil/crypto3/zk/snark/blueprint.hpp>
+#include <nil/crypto3/zk/snark/blueprint_variable.hpp>
+
+#include <nil/crypto3/zk/snark/proof_systems/ppzksnark/r1cs_gg_ppzksnark.hpp>
+
+#include <nil/crypto3/zk/snark/algorithms/generate.hpp>
+
+using namespace nil::crypto3;
+
+typedef algebra::curves::bls12<381> curve_type;
+typedef typename curve_type::scalar_field_type field_type;
+
+typedef zk::snark::r1cs_gg_ppzksnark<curve_type> scheme_type;
+
 int main(int argc, char *argv[]) {
-    std::string out;
+    std::string pout, pkout, vkout;
     boost::program_options::options_description options(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
         "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator");
-
-    options.add_options()("help,h", "Display help message");
-    options.add_options()("version,v", "Display version");
-    options.add_options()("output,o", boost::program_options::value<std::string>(&out)->default_value("proof"));
+    // clang-format off
+    options.add_options()("help,h", "Display help message")
+    ("version,v", "Display version")
+    ("proof-output,po", boost::program_options::value<std::string>(&pout)->default_value("proof"))
+    ("proving-key-output,pko", boost::program_options::value<std::string>(&pkout)->default_value("pkey"))
+    ("verifying-key-output,vko", boost::program_options::value<std::string>(&vkout)->default_value("vkey"));
+    // clang-format on
 
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(options).run(), vm);
@@ -37,6 +56,32 @@ int main(int argc, char *argv[]) {
         std::cout << options << std::endl;
         return 0;
     }
+
+    zk::snark::blueprint<field_type> bp;
+    zk::snark::blueprint_variable<field_type> res, x, sum1, y, sum2;
+    res.allocate(bp);
+    x.allocate(bp);
+    sum1.allocate(bp);
+    y.allocate(bp);
+    sum2.allocate(bp);
+
+    bp.set_input_sizes(1);
+
+    // x*x = sym_1
+    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(x, x, sum1));
+
+    // sym_1 * x = y
+    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(sum1, x, y));
+
+    // y + x = sym_2
+    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(y + x, 1, sum2));
+
+    // sym_2 + 5 = res
+    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(sum2 + 5, 1, res));
+
+    zk::snark::r1cs_constraint_system<field_type> constraint_system = bp.get_constraint_system();
+
+    typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(constraint_system);
 
     return 0;
 }

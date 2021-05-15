@@ -15,8 +15,8 @@
 //---------------------------------------------------------------------------//
 
 #include <iostream>
-#include <string>
 
+#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
 #include <nil/crypto3/algebra/curves/bls12.hpp>
@@ -36,16 +36,18 @@ typedef typename curve_type::scalar_field_type field_type;
 typedef zk::snark::r1cs_gg_ppzksnark<curve_type> scheme_type;
 
 int main(int argc, char *argv[]) {
-    std::string pout, pkout, vkout;
+    boost::filesystem::path pout, pkout, vkout;
     boost::program_options::options_description options(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
         "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator");
     // clang-format off
     options.add_options()("help,h", "Display help message")
     ("version,v", "Display version")
-    ("proof-output,po", boost::program_options::value<std::string>(&pout)->default_value("proof"))
-    ("proving-key-output,pko", boost::program_options::value<std::string>(&pkout)->default_value("pkey"))
-    ("verifying-key-output,vko", boost::program_options::value<std::string>(&vkout)->default_value("vkey"));
+    ("generate", "Generate proofs and/or keys")
+    ("verify", "Verify proofs and/or keys")
+    ("proof-output,po", boost::program_options::value<boost::filesystem::path>(&pout)->default_value("proof"))
+    ("proving-key-output,pko", boost::program_options::value<boost::filesystem::path>(&pkout)->default_value("pkey"))
+    ("verifying-key-output,vko", boost::program_options::value<boost::filesystem::path>(&vkout)->default_value("vkey"));
     // clang-format on
 
     boost::program_options::variables_map vm;
@@ -82,6 +84,18 @@ int main(int argc, char *argv[]) {
     zk::snark::r1cs_constraint_system<field_type> constraint_system = bp.get_constraint_system();
 
     typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(constraint_system);
+
+    if (vm.count("proving-key-output")) {
+
+    }
+
+    if (vm.count("verifying-key-output")) {
+
+    }
+
+    if (vm.count("proof-output")) {
+
+    }
 
     return 0;
 }

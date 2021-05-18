@@ -1,24 +1,22 @@
 # TON Proof Verification Contest.
 
 One of the exciting recent developments around zk-SNARKs is that it is now possible to verify a zk-SNARK proof in a
-lscs (a.k.a. smart contract) on FreeTON. This opens up the possibility of private transactions and the ability to verify
-large computations on the blockchain.
+lscs (a.k.a. smart contract) on FreeTON. 
 
 Let's see how we can create a Solidity smart contract to generate proofs for that circuit on FreeTON.
 
-## How to build
+## Building 
 
 Requirements: Boost >= 1.74.
 
+```shell
 git clone --recursive git@github.com:NilFoundation/ton-proof-verification-contest.git contest && cd contest
-
 mkdir build && cd build
-
 cmake ..
-
 make cli
+```
 
-## How to create verification instruction VERGRTH16 input
+## Verification instruction VERGRTH16 input creation
 
 To create `VERGRTH16` instruction input you need to represent the 'what you want to prove' in the form of a constraint
 system using =nil;Crypto3 [Blueprint](https://github.com/NilFoundation/crypto3-blueprint) module and then prove it using

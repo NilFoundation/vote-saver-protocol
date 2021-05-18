@@ -98,8 +98,8 @@ int main(int argc, char *argv[]) {
     if (vm.count("proof-output")) {
 
     }*/
-    
-    export_vergrth16_data_to_file(keypair.second, "./exported_data.bin");
+
+    export_vergrth16_data_to_file<algebra::curves::bls12<381>>(keypair.second, "./exported_data.bin");
 
     return 0;
 }

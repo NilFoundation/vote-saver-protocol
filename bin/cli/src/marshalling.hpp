@@ -284,8 +284,8 @@ public:
         std::size_t gt_size = modulus_chunks * CurveType::gt_type::underlying_field_type::arity;
 
         std::size_t sparse_vector_size =
-            std_size_t_size + vd.vk.gamma_ABC_g1.rest.size() * std_size_t_size + std_size_t_size +
-            vd.vk.gamma_ABC_g1.rest.values.size() * g1_size + std_size_t_size;
+            std_size_t_size + vk.gamma_ABC_g1.rest.size() * std_size_t_size + std_size_t_size +
+            vk.gamma_ABC_g1.rest.values.size() * g1_size + std_size_t_size;
 
         std::size_t verification_key_size =
             gt_size + g2_size + g2_size + g1_size + sparse_vector_size;
@@ -294,7 +294,7 @@ public:
 
         typename std::vector<chunk_type>::iterator write_iter = output.begin();
 
-        verification_key_process(vd.vk, write_iter);
+        verification_key_process(vk, write_iter);
 
         return output;
     }

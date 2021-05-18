@@ -64,10 +64,20 @@
 #include <nil/crypto3/zk/snark/algorithms/verify.hpp>
 #include <nil/crypto3/zk/snark/algorithms/prove.hpp>
 
+#include <vector>
+
+#include <nil/crypto3/multiprecision/number.hpp>
+#include <nil/crypto3/multiprecision/cpp_int.hpp>
+#include <nil/crypto3/multiprecision/modular/modular_adaptor.hpp>
+
 #include <nil/crypto3/zk/snark/schemes/ppzksnark/r1cs_gg_ppzksnark.hpp>
-#include <nil/crypto3/zk/snark/schemes/ppzksnark/policies/r1cs_gg_ppzksnark/generator.hpp>
-#include <nil/crypto3/zk/snark/schemes/ppzksnark/policies/r1cs_gg_ppzksnark/prover.hpp>
-#include <nil/crypto3/zk/snark/schemes/ppzksnark/policies/r1cs_gg_ppzksnark/verifier.hpp>
+#include <nil/crypto3/zk/snark/sparse_vector.hpp>
+#include <nil/crypto3/zk/snark/accumulation_vector.hpp>
+
+#include <nil/crypto3/detail/pack.hpp>
+#include <nil/crypto3/detail/stream_endian.hpp>
+
+#include <nil/crypto3/zk/snark/schemes/ppzksnark/r1cs_gg_ppzksnark.hpp>
 
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 

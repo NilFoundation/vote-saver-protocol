@@ -24,11 +24,11 @@
 #include <nil/crypto3/zk/snark/blueprint.hpp>
 #include <nil/crypto3/zk/snark/blueprint_variable.hpp>
 
-#include <nil/crypto3/zk/snark/proof_systems/ppzksnark/r1cs_gg_ppzksnark.hpp>
+#include <nil/crypto3/zk/snark/schemes/ppzksnark/r1cs_gg_ppzksnark.hpp>
 
 #include <nil/crypto3/zk/snark/algorithms/generate.hpp>
 
-#include "./marshalling.hpp"
+#include "ton/proof/marshalling.hpp"
 
 using namespace nil::crypto3;
 
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
 
     typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(constraint_system);
 
-    /*if (vm.count("proving-key-output")) {
+    if (vm.count("proving-key-output")) {
 
     }
 
@@ -96,10 +96,14 @@ int main(int argc, char *argv[]) {
     }
 
     if (vm.count("proof-output")) {
+        std::vector<std::uint8_t> blob;
 
-    }*/
+        pack_tvm(keypair.second, primary_input, proof, blob);
 
-    export_vergrth16_data_to_file(keypair.second, primary_input, proof, "./exported_data.bin");
+        boost::filesystem::ofstream poutf(pout);
+        poutf << blob;
+        poutf.close();
+    }
 
     return 0;
 }

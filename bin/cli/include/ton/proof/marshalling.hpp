@@ -22,58 +22,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //---------------------------------------------------------------------------//
-// @file Declaration of interfaces for a ppzkSNARK for R1CS with a security proof
-// in the generic group (GG) model.
-//
-// This includes:
-//- class for proving key
-//- class for verification key
-//- class for processed verification key
-//- class for key pair (proving key & verification key)
-//- class for proof
-//- generator algorithm
-//- prover algorithm
-//- verifier algorithm (with strong or weak input consistency)
-//- online verifier algorithm (with strong or weak input consistency)
-//
-// The implementation instantiates the protocol of \[Gro16].
-//
-//
-// Acronyms:
-//
-//- R1CS = "Rank-1 Constraint Systems"
-//- ppzkSNARK = "PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge"
-//
-// References:
-//
-//\[Gro16]:
-// "On the Size of Pairing-based Non-interactive Arguments",
-// Jens Groth,
-// EUROCRYPT 2016,
-// <https://eprint.iacr.org/2016/260>
-//---------------------------------------------------------------------------//
 
 #ifndef CRYPTO3_R1CS_GG_PPZKSNARK_TYPES_TVM_MARSHALLING_HPP
 #define CRYPTO3_R1CS_GG_PPZKSNARK_TYPES_TVM_MARSHALLING_HPP
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <iostream>
 
 #include <nil/crypto3/zk/snark/blueprint.hpp>
+
 #include <nil/crypto3/zk/snark/algorithms/generate.hpp>
 #include <nil/crypto3/zk/snark/algorithms/verify.hpp>
 #include <nil/crypto3/zk/snark/algorithms/prove.hpp>
 
 #include <nil/crypto3/zk/snark/schemes/ppzksnark/r1cs_gg_ppzksnark.hpp>
-#include <nil/crypto3/zk/snark/schemes/ppzksnark/policies/r1cs_gg_ppzksnark/generator.hpp>
-#include <nil/crypto3/zk/snark/schemes/ppzksnark/policies/r1cs_gg_ppzksnark/prover.hpp>
-#include <nil/crypto3/zk/snark/schemes/ppzksnark/policies/r1cs_gg_ppzksnark/verifier.hpp>
 
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 
 using namespace nil::crypto3::zk::snark;
 using namespace nil::crypto3::algebra;
-using namespace std;
 
 template<typename ProofSystem>
 class verifier_data_to_bits;
@@ -85,44 +52,35 @@ class verifier_data_to_bits<r1cs_gg_ppzksnark<CurveType>> {
 
     constexpr static const std::size_t modulus_bits = CurveType::base_field_type::modulus_bits;
 
-    typedef nil::crypto3::multiprecision::number<
-        nil::crypto3::multiprecision::backends::cpp_int_backend<>>
+    typedef nil::crypto3::multiprecision::number<nil::crypto3::multiprecision::backends::cpp_int_backend<>>
         modulus_type;
 
     using chunk_type = std::uint8_t;
 
     constexpr static const std::size_t chunk_size = 8;
-    constexpr static const std::size_t modulus_chunks =
-        modulus_bits / chunk_size + modulus_bits % chunk_size;
+    constexpr static const std::size_t modulus_chunks = modulus_bits / chunk_size + modulus_bits % chunk_size;
 
     template<typename FieldType>
 
-    static inline
-        typename std::enable_if<!::nil::crypto3::detail::is_extended_field<FieldType>::value,
-                                void>::type
+    static inline typename std::enable_if<!::nil::crypto3::detail::is_extended_field<FieldType>::value, void>::type
         field_type_process(typename FieldType::value_type input_fp,
                            typename std::vector<chunk_type>::iterator &write_iter) {
 
-        nil::crypto3::multiprecision::export_bits(modulus_type(input_fp.data), write_iter,
-                                                  chunk_size, false);
+        nil::crypto3::multiprecision::export_bits(modulus_type(input_fp.data), write_iter, chunk_size, false);
         write_iter += modulus_chunks;
     }
 
     template<typename FieldType>
-    static inline
-        typename std::enable_if<::nil::crypto3::detail::is_extended_field<FieldType>::value,
-                                void>::type
+    static inline typename std::enable_if<::nil::crypto3::detail::is_extended_field<FieldType>::value, void>::type
         field_type_process(typename FieldType::value_type input_fp,
                            typename std::vector<chunk_type>::iterator &write_iter) {
 
         using field_type = FieldType;
 
-        const std::size_t data_dimension =
-            field_type::arity / field_type::underlying_field_type::arity;
+        const std::size_t data_dimension = field_type::arity / field_type::underlying_field_type::arity;
 
         for (int n = 0; n < data_dimension; ++n) {
-            field_type_process<typename field_type::underlying_field_type>(input_fp.data[n],
-                                                                           write_iter);
+            field_type_process<typename field_type::underlying_field_type>(input_fp.data[n], write_iter);
         }
     }
 
@@ -135,22 +93,20 @@ class verifier_data_to_bits<r1cs_gg_ppzksnark<CurveType>> {
         field_type_process<typename GroupType::underlying_field_type>(input_g.Z, write_iter);
     }
 
-    static inline void std_size_t_process(std::size_t input_s,
-                                          std::vector<chunk_type>::iterator &write_iter) {
+    static inline void std_size_t_process(std::size_t input_s, std::vector<chunk_type>::iterator &write_iter) {
 
         std::vector<std::size_t> vector_s = {input_s};
 
         auto internal_write_iter = write_iter;
-        nil::crypto3::detail::pack_to<nil::crypto3::stream_endian::big_octet_big_bit, 32, 8>(
-            vector_s, internal_write_iter);
+        nil::crypto3::detail::pack_to<nil::crypto3::stream_endian::big_octet_big_bit, 32, 8>(vector_s,
+                                                                                             internal_write_iter);
 
         write_iter += sizeof(std::size_t);
     }
 
     template<typename T>
-    static inline void
-        sparse_vector_process(sparse_vector<T> input_sp,
-                              typename std::vector<chunk_type>::iterator &write_iter) {
+    static inline void sparse_vector_process(sparse_vector<T> input_sp,
+                                             typename std::vector<chunk_type>::iterator &write_iter) {
 
         std::size_t indices_count = input_sp.size();
 
@@ -172,17 +128,15 @@ class verifier_data_to_bits<r1cs_gg_ppzksnark<CurveType>> {
     }
 
     template<typename T>
-    static inline void
-        accumulation_vector_process(accumulation_vector<T> input_acc,
-                                    typename std::vector<chunk_type>::iterator &write_iter) {
+    static inline void accumulation_vector_process(accumulation_vector<T> input_acc,
+                                                   typename std::vector<chunk_type>::iterator &write_iter) {
 
         group_type_process<T>(input_acc.first, write_iter);
         sparse_vector_process(input_acc.rest, write_iter);
     }
 
-    static inline void
-        verification_key_process(typename scheme_type::verification_key_type vk,
-                                 typename std::vector<chunk_type>::iterator &write_iter) {
+    static inline void verification_key_process(typename scheme_type::verification_key_type vk,
+                                                typename std::vector<chunk_type>::iterator &write_iter) {
 
         field_type_process<typename CurveType::gt_type>(vk.alpha_g1_beta_g2, write_iter);
         group_type_process<typename CurveType::g2_type>(vk.gamma_g2, write_iter);
@@ -191,9 +145,8 @@ class verifier_data_to_bits<r1cs_gg_ppzksnark<CurveType>> {
         accumulation_vector_process(vk.gamma_ABC_g1, write_iter);
     }
 
-    static inline void
-        primary_input_process(typename scheme_type::primary_input_type pi,
-                              typename std::vector<chunk_type>::iterator &write_iter) {
+    static inline void primary_input_process(typename scheme_type::primary_input_type pi,
+                                             typename std::vector<chunk_type>::iterator &write_iter) {
 
         std::size_t pi_count = pi.size();
 
@@ -235,17 +188,15 @@ public:
 
         std::size_t gt_size = modulus_chunks * CurveType::gt_type::underlying_field_type::arity;
 
-        std::size_t sparse_vector_size =
-            std_size_t_size + vd.vk.gamma_ABC_g1.rest.size() * std_size_t_size + std_size_t_size +
-            vd.vk.gamma_ABC_g1.rest.values.size() * g1_size + std_size_t_size;
+        std::size_t sparse_vector_size = std_size_t_size + vd.vk.gamma_ABC_g1.rest.size() * std_size_t_size +
+                                         std_size_t_size + vd.vk.gamma_ABC_g1.rest.values.size() * g1_size +
+                                         std_size_t_size;
 
-        std::size_t verification_key_size =
-            gt_size + g2_size + g2_size + g1_size + sparse_vector_size;
+        std::size_t verification_key_size = gt_size + g2_size + g2_size + g1_size + sparse_vector_size;
         std::size_t primary_input_size = std_size_t_size + vd.pi.size() * modulus_chunks;
         std::size_t proof_size = g1_size + g2_size + g1_size;
 
-        std::vector<chunk_type> output(2 *
-                                       (verification_key_size + primary_input_size + proof_size));
+        std::vector<chunk_type> output(2 * (verification_key_size + primary_input_size + proof_size));
 
         typename std::vector<chunk_type>::iterator write_iter = output.begin();
 
@@ -271,28 +222,20 @@ public:
     }
 };
 
-template<typename CurveType>
-void export_vergrth16_data_to_file(typename r1cs_gg_ppzksnark<CurveType>::verification_key_type vk,
-                                   typename r1cs_gg_ppzksnark<CurveType>::primary_input_type pi,
-                                   typename r1cs_gg_ppzksnark<CurveType>::proof_type pr, 
-                                   string pathToFile) {
-  
-  using curve_type = CurveType;
-  using field_type = typename curve_type::scalar_field_type;
-  using scheme_type = r1cs_gg_ppzksnark<CurveType>;
+template<typename CurveType, typename OutputIterator>
+void pack_tvm(typename r1cs_gg_ppzksnark<CurveType>::verification_key_type vk,
+              typename r1cs_gg_ppzksnark<CurveType>::primary_input_type pi,
+              typename r1cs_gg_ppzksnark<CurveType>::proof_type pr,
+              OutputIterator out) {
 
-  using chunk_type = std::uint8_t;
+    using curve_type = CurveType;
+    using field_type = typename curve_type::scalar_field_type;
+    using scheme_type = r1cs_gg_ppzksnark<CurveType>;
 
-  ofstream vergrth16_data_file;
-  vergrth16_data_file.open(pathToFile);
+    using chunk_type = std::uint8_t;
 
-  std::vector<chunk_type> vergrth16_byteblob = verifier_data_to_bits<scheme_type>::process(vk, pi, pr);
-
-  for(std::size_t i=0; i<vergrth16_byteblob.size(); i++) {
-    vergrth16_data_file << vergrth16_byteblob[i] << endl;
-  }
-
-  vergrth16_data_file.close();
+    std::vector<chunk_type> vergrth16_byteblob = verifier_data_to_bits<scheme_type>::process(vk, pi, pr);
+    std::copy(vergrth16_byteblob.begin(), vergrth16_byteblob.end(), out);
 }
 
 #endif    // CRYPTO3_R1CS_GG_PPZKSNARK_TYPES_TVM_MARSHALLING_HPP

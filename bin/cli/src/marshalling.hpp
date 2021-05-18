@@ -275,6 +275,30 @@ public:
         return process(verifier_data(vk, pi, pr));
     }
 
+    static inline std::vector<chunk_type> process(typename scheme_type::verification_key_type vk) {
+
+        std::size_t g1_size = modulus_chunks * 3 * CurveType::g1_type::underlying_field_type::arity;
+        std::size_t g2_size = modulus_chunks * 3 * CurveType::g2_type::underlying_field_type::arity;
+        std::size_t std_size_t_size = 4;
+
+        std::size_t gt_size = modulus_chunks * CurveType::gt_type::underlying_field_type::arity;
+
+        std::size_t sparse_vector_size =
+            std_size_t_size + vd.vk.gamma_ABC_g1.rest.size() * std_size_t_size + std_size_t_size +
+            vd.vk.gamma_ABC_g1.rest.values.size() * g1_size + std_size_t_size;
+
+        std::size_t verification_key_size =
+            gt_size + g2_size + g2_size + g1_size + sparse_vector_size;
+
+        std::vector<chunk_type> output(2 * verification_key_size);
+
+        typename std::vector<chunk_type>::iterator write_iter = output.begin();
+
+        verification_key_process(vd.vk, write_iter);
+
+        return output;
+    }
+
     static inline std::vector<chunk_type> process() {
 
         return process(verifier_data());
@@ -297,6 +321,28 @@ void export_vergrth16_data_to_file(typename r1cs_gg_ppzksnark<CurveType>::verifi
   vergrth16_data_file.open(pathToFile);
 
   std::vector<chunk_type> vergrth16_byteblob = verifier_data_to_bits<scheme_type>::process(vk, pi, pr);
+
+  for(std::size_t i=0; i<vergrth16_byteblob.size(); i++) {
+    vergrth16_data_file << vergrth16_byteblob[i] << endl;
+  }
+
+  vergrth16_data_file.close();
+}
+
+template<typename CurveType>
+void export_vergrth16_data_to_file(typename r1cs_gg_ppzksnark<CurveType>::verification_key_type vk,
+                                   string pathToFile) {
+  
+  using curve_type = CurveType;
+  using field_type = typename curve_type::scalar_field_type;
+  using scheme_type = r1cs_gg_ppzksnark<CurveType>;
+
+  using chunk_type = std::uint8_t;
+
+  ofstream vergrth16_data_file;
+  vergrth16_data_file.open(pathToFile);
+
+  std::vector<chunk_type> vergrth16_byteblob = verifier_data_to_bits<scheme_type>::process(vk);
 
   for(std::size_t i=0; i<vergrth16_byteblob.size(); i++) {
     vergrth16_data_file << vergrth16_byteblob[i] << endl;

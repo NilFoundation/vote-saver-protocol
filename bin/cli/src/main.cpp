@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
     if (vm.count("proof-output")) {
         std::vector<std::uint8_t> blob;
 
-        pack_tvm(keypair.second, primary_input, proof, blob);
+        pack_tvm<curve_type>(keypair.second, primary_input, proof, blob);
 
         boost::filesystem::ofstream poutf(pout);
         poutf << blob;

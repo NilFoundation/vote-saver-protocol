@@ -275,26 +275,4 @@ void pack_tvm(typename r1cs_gg_ppzksnark<CurveType>::verification_key_type vk,
     std::copy(vergrth16_byteblob.begin(), vergrth16_byteblob.end(), out);
 }
 
-template<typename CurveType>
-void export_vergrth16_data_to_file(typename r1cs_gg_ppzksnark<CurveType>::verification_key_type vk,
-                                   string pathToFile) {
-  
-  using curve_type = CurveType;
-  using field_type = typename curve_type::scalar_field_type;
-  using scheme_type = r1cs_gg_ppzksnark<CurveType>;
-
-  using chunk_type = std::uint8_t;
-
-  ofstream vergrth16_data_file;
-  vergrth16_data_file.open(pathToFile);
-
-  std::vector<chunk_type> vergrth16_byteblob = verifier_data_to_bits<scheme_type>::process(vk);
-
-  for(std::size_t i=0; i<vergrth16_byteblob.size(); i++) {
-    vergrth16_data_file << vergrth16_byteblob[i];
-  }
-
-  vergrth16_data_file.close();
-}
-
 #endif    // CRYPTO3_R1CS_GG_PPZKSNARK_TYPES_TVM_MARSHALLING_HPP

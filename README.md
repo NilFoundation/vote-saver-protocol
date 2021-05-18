@@ -6,6 +6,18 @@ large computations on the blockchain.
 
 Let's see how we can create a Solidity smart contract to generate proofs for that circuit on FreeTON.
 
+## How to build
+
+Requirements: Boost >= 1.74.
+
+git clone --recursive git@github.com:NilFoundation/ton-proof-verification-contest.git contest && cd contest
+
+mkdir build && cd build
+
+cmake ..
+
+make cli
+
 ## How to create verification instruction VERGRTH16 input
 
 To create `VERGRTH16` instruction input you need to represent the 'what you want to prove' in the form of a constraint

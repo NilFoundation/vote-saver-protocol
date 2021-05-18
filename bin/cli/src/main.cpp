@@ -28,6 +28,8 @@
 
 #include <nil/crypto3/zk/snark/algorithms/generate.hpp>
 
+#include "./marshalling.hpp"
+
 using namespace nil::crypto3;
 
 typedef algebra::curves::bls12<381> curve_type;
@@ -85,7 +87,7 @@ int main(int argc, char *argv[]) {
 
     typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(constraint_system);
 
-    if (vm.count("proving-key-output")) {
+    /*if (vm.count("proving-key-output")) {
 
     }
 
@@ -95,7 +97,9 @@ int main(int argc, char *argv[]) {
 
     if (vm.count("proof-output")) {
 
-    }
+    }*/
+
+    export_vergrth16_data_to_file(keypair.second, primary_input, proof, "./exported_data.bin");
 
     return 0;
 }

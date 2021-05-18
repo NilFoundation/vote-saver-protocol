@@ -345,7 +345,7 @@ void export_vergrth16_data_to_file(typename r1cs_gg_ppzksnark<CurveType>::verifi
   std::vector<chunk_type> vergrth16_byteblob = verifier_data_to_bits<scheme_type>::process(vk);
 
   for(std::size_t i=0; i<vergrth16_byteblob.size(); i++) {
-    vergrth16_data_file << vergrth16_byteblob[i] << endl;
+    vergrth16_data_file << vergrth16_byteblob[i];
   }
 
   vergrth16_data_file.close();

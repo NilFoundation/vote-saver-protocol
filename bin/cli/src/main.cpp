@@ -33,7 +33,7 @@
 
 #include <nil/crypto3/zk/snark/algorithms/generate.hpp>
 
-#include "ton/proof/marshalling.hpp"
+#include <ton/proof/marshalling/tvm.hpp>
 
 using namespace nil::crypto3;
 

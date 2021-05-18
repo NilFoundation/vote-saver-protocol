@@ -6,7 +6,7 @@ Let's see how we can create a Solidity smart contract to generate proofs for tha
 
 ## How to create verification instruction VERGRTH16 input
 
-To create VERGRTH16 instruction input you need to represent the 'what you want to prove' in the form of a constraint system using =nil;Crypto3 [Blueprint](https://github.com/NilFoundation/crypto3-blueprint) module and then prove it using =nil;Crypto3 
+To create `VERGRTH16` instruction input you need to represent the 'what you want to prove' in the form of a constraint system using =nil;Crypto3 [Blueprint](https://github.com/NilFoundation/crypto3-blueprint) module and then prove it using =nil;Crypto3 
 [ZK](https://github.com/NilFoundation/crypto3-zk) module. Then you can use byte-serialized output of the 'prove' function as input to the instruction in your lscs (a.k.a. smart contract).
 
 The =nil;Crypto3 Blueprint zk-SNARK library is a powerful library for defining circuits, generating & verifying proofs. It can be hard to get a sense of how to use it in practice, so please follow [the tutorial](https://github.com/NilFoundation/crypto3-blueprint) providing a sense of the high-level components of =nil;Crypto3 Blueprint and how to use it concretely, as well as how to connect the proofs to FreeTON lscs.

@@ -14,10 +14,13 @@
 // limitations under the License.
 //---------------------------------------------------------------------------//
 
+#include <cassert>
 #include <iostream>
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
+
+#include "detail/r1cs_examples.hpp"
 
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
@@ -35,6 +38,8 @@
 
 #include <ton/proof/marshalling/tvm.hpp>
 
+#include <nil/crypto3/zk/snark/components/basic_components.hpp>
+
 using namespace nil::crypto3;
 
 typedef algebra::curves::bls12<381> curve_type;
@@ -51,7 +56,7 @@ int main(int argc, char *argv[]) {
     options.add_options()("help,h", "Display help message")
     ("version,v", "Display version")
     ("generate", "Generate proofs and/or keys")
-    ("verify", "Verify proofs and/or keys")
+    ("verify", "verify proofs and/or keys")
     ("proof-output,po", boost::program_options::value<boost::filesystem::path>(&pout)->default_value("proof"))
     ("proving-key-output,pko", boost::program_options::value<boost::filesystem::path>(&pkout)->default_value("pkey"))
     ("verifying-key-output,vko", boost::program_options::value<boost::filesystem::path>(&vkout)->default_value("vkey"));
@@ -66,33 +71,47 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    zk::snark::blueprint<field_type> bp;
-    zk::snark::blueprint_variable<field_type> res, x, sum1, y, sum2;
-    res.allocate(bp);
-    x.allocate(bp);
-    sum1.allocate(bp);
-    y.allocate(bp);
-    sum2.allocate(bp);
+    std::size_t n = 10;
 
-    bp.set_input_sizes(1);
+    blueprint<field_type> bp;
+    blueprint_variable_vector<field_type> A;
+    A.allocate(bp, n);
+    blueprint_variable_vector<field_type> B;
+    B.allocate(bp, n);
 
-    // x*x = sym_1
-    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(x, x, sum1));
+    blueprint_variable<field_type> result;
+    result.allocate(bp);
 
-    // sym_1 * x = y
-    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(sum1, x, y));
+    components::inner_product_component<field_type> g(bp, A, B, result);
+    g.generate_r1cs_constraints();
 
-    // y + x = sym_2
-    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(y + x, 1, sum2));
+    for (std::size_t i = 0; i < 1ul << n; ++i) {
+        for (std::size_t j = 0; j < 1ul << n; ++j) {
+            std::size_t correct = 0;
+            for (std::size_t k = 0; k < n; ++k) {
+                bp.val(A[k]) = (i & (1ul << k) ? field_type::value_type::one() : field_type::value_type::zero());
+                bp.val(B[k]) = (j & (1ul << k) ? field_type::value_type::one() : field_type::value_type::zero());
+                correct += ((i & (1ul << k)) && (j & (1ul << k)) ? 1 : 0);
+            }
 
-    // sym_2 + 5 = res
-    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(sum2 + 5, 1, res));
+            g.generate_r1cs_witness();
 
-    zk::snark::r1cs_constraint_system<field_type> constraint_system = bp.get_constraint_system();
+            assert(bp.val(result) == typename field_type::value_type(correct));
+            assert(bp.is_satisfied());
 
-    typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(constraint_system);
+            bp.val(result) = typename field_type::value_type(100 * n + 19);
+            assert(!bp.is_satisfied());
+        }
+    }
 
-    const typename scheme_type::proof_type proof = prove<scheme_type>(keypair.first, bp.primary_input(), bp.auxiliary_input());
+    zk::snark::detail::r1cs_example<field_type> example =
+        zk::snark::detail::r1cs_example<field_type>(bp.get_constraint_system(), bp.primary_input(), bp.auxiliary_input());
+
+    //zk::snark::r1cs_constraint_system<field_type> constraint_system = bp.get_constraint_system();
+
+    typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(example.constraint_system);
+
+    const typename scheme_type::proof_type proof = prove<scheme_type>(keypair.first, example.primary_input, example.auxiliary_input);
 
     if (vm.count("proving-key-output")) {
     }
@@ -103,7 +122,7 @@ int main(int argc, char *argv[]) {
     if (vm.count("proof-output")) {
         std::vector<std::uint8_t> blob;
 
-        pack_tvm<curve_type>(keypair.second, bp.primary_input(), proof, blob.begin());
+        pack_tvm<curve_type>(keypair.second, example.primary_input, proof, blob.begin());
 
         boost::filesystem::ofstream poutf(pout);
         for (const auto &v : blob) {

@@ -92,6 +92,8 @@ int main(int argc, char *argv[]) {
 
     typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(constraint_system);
 
+    const typename scheme_type::proof_type proof = prove<scheme_type>(keypair.first, bp.primary_input(), bp.auxiliary_input());
+
     if (vm.count("proving-key-output")) {
     }
 
@@ -101,7 +103,7 @@ int main(int argc, char *argv[]) {
     if (vm.count("proof-output")) {
         std::vector<std::uint8_t> blob;
 
-        pack_tvm<curve_type>(keypair.second, primary_input, proof, blob);
+        pack_tvm<curve_type>(keypair.second, bp.primary_input(), proof, blob.begin());
 
         boost::filesystem::ofstream poutf(pout);
         for (const auto &v : blob) {

@@ -110,7 +110,7 @@ class verifier_data_to_bits<r1cs_gg_ppzksnark<CurveType>> {
         std::vector<std::size_t> vector_s = {input_s};
 
         auto internal_write_iter = write_iter;
-        detail::pack_to<nil::crypto3::stream_endian::big_octet_big_bit, 32, 8>(vector_s, internal_write_iter);
+        ::nil::crypto3::detail::pack_to<nil::crypto3::stream_endian::big_octet_big_bit, 32, 8>(vector_s, internal_write_iter);
 
         write_iter += sizeof(std::size_t);
     }

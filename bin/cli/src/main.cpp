@@ -19,6 +19,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
+#include "detail/r1cs_examples.hpp"
+#include "detail/sha256_component.hpp"
+
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
@@ -34,6 +37,8 @@
 #include <nil/crypto3/zk/snark/algorithms/generate.hpp>
 
 #include <ton/proof/marshalling/tvm.hpp>
+
+
 
 using namespace nil::crypto3;
 
@@ -51,7 +56,7 @@ int main(int argc, char *argv[]) {
     options.add_options()("help,h", "Display help message")
     ("version,v", "Display version")
     ("generate", "Generate proofs and/or keys")
-    ("verify", "Verify proofs and/or keys")
+    ("verify", "verify proofs and/or keys")
     ("proof-output,po", boost::program_options::value<boost::filesystem::path>(&pout)->default_value("proof"))
     ("proving-key-output,pko", boost::program_options::value<boost::filesystem::path>(&pkout)->default_value("pkey"))
     ("verifying-key-output,vko", boost::program_options::value<boost::filesystem::path>(&vkout)->default_value("vkey"));
@@ -66,31 +71,39 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    zk::snark::blueprint<field_type> bp;
-    zk::snark::blueprint_variable<field_type> res, x, sum1, y, sum2;
-    res.allocate(bp);
-    x.allocate(bp);
-    sum1.allocate(bp);
-    y.allocate(bp);
-    sum2.allocate(bp);
+    std::cout << "SHA2-256 blueprint generation started." << std::endl;
 
-    bp.set_input_sizes(1);
+    blueprint<field_type> bp = sha2_two_to_one_bp<field_type>();
 
-    // x*x = sym_1
-    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(x, x, sum1));
+    std::cout << "SHA2-256 blueprint generation finished." << std::endl;
 
-    // sym_1 * x = y
-    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(sum1, x, y));
+    std::cout << "R1CS generation started." << std::endl;
 
-    // y + x = sym_2
-    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(y + x, 1, sum2));
+    r1cs_example<field_type> example =
+        r1cs_example<field_type>(bp.get_constraint_system(), bp.primary_input(), bp.auxiliary_input());
 
-    // sym_2 + 5 = res
-    bp.add_r1cs_constraint(zk::snark::r1cs_constraint<field_type>(sum2 + 5, 1, res));
+    std::cout << "R1CS generation finished." << std::endl;
 
-    zk::snark::r1cs_constraint_system<field_type> constraint_system = bp.get_constraint_system();
+    //const bool bit = run_r1cs_gg_ppzksnark<CurveType>(example);
 
-    typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(constraint_system);
+    // zk::snark::detail::r1cs_example<field_type> example =
+    //     zk::snark::detail::r1cs_example<field_type>(bp.get_constraint_system(), bp.primary_input(), bp.auxiliary_input());
+
+    //zk::snark::r1cs_constraint_system<field_type> constraint_system = bp.get_constraint_system();
+
+    std::cout << "Starting generator" << std::endl;
+
+    typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(example.constraint_system);
+
+    std::cout << "Starting prover" << std::endl;
+
+    const typename scheme_type::proof_type proof = prove<scheme_type>(keypair.first, example.primary_input, example.auxiliary_input);
+
+    // std::cout << "Starting verifier" << std::endl;
+
+    // const bool ans = verify<basic_proof_system>(keypair.second, example.primary_input, proof);
+
+    // std::cout << "Verifier finished, result: " << ans << std::endl;
 
     if (vm.count("proving-key-output")) {
     }
@@ -101,7 +114,7 @@ int main(int argc, char *argv[]) {
     if (vm.count("proof-output")) {
         std::vector<std::uint8_t> blob;
 
-        pack_tvm<curve_type>(keypair.second, primary_input, proof, blob);
+        pack_tvm<curve_type>(keypair.second, example.primary_input, proof, blob.begin());
 
         boost::filesystem::ofstream poutf(pout);
         for (const auto &v : blob) {

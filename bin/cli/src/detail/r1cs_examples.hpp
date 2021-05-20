@@ -37,34 +37,32 @@ namespace nil {
     namespace crypto3 {
         namespace zk {
             namespace snark {
-                namespace detail {
 
-                    using namespace nil::crypto3::algebra;
+                using namespace nil::crypto3::algebra;
 
-                    /**
-                     * A R1CS example comprises a R1CS constraint system, R1CS input, and R1CS witness.
-                     */
-                    template<typename FieldType>
-                    struct r1cs_example {
-                        r1cs_constraint_system<FieldType> constraint_system;
-                        r1cs_primary_input<FieldType> primary_input;
-                        r1cs_auxiliary_input<FieldType> auxiliary_input;
+                /**
+                 * A R1CS example comprises a R1CS constraint system, R1CS input, and R1CS witness.
+                 */
+                template<typename FieldType>
+                struct r1cs_example {
+                    r1cs_constraint_system<FieldType> constraint_system;
+                    r1cs_primary_input<FieldType> primary_input;
+                    r1cs_auxiliary_input<FieldType> auxiliary_input;
 
-                        r1cs_example<FieldType>() = default;
-                        r1cs_example<FieldType>(const r1cs_example<FieldType> &other) = default;
-                        r1cs_example<FieldType>(const r1cs_constraint_system<FieldType> &constraint_system,
-                                                const r1cs_primary_input<FieldType> &primary_input,
-                                                const r1cs_auxiliary_input<FieldType> &auxiliary_input) :
-                            constraint_system(constraint_system),
-                            primary_input(primary_input), auxiliary_input(auxiliary_input) {};
-                        r1cs_example<FieldType>(r1cs_constraint_system<FieldType> &&constraint_system,
-                                                r1cs_primary_input<FieldType> &&primary_input,
-                                                r1cs_auxiliary_input<FieldType> &&auxiliary_input) :
-                            constraint_system(std::move(constraint_system)),
-                            primary_input(std::move(primary_input)), auxiliary_input(std::move(auxiliary_input)) {};
-                    };
+                    r1cs_example<FieldType>() = default;
+                    r1cs_example<FieldType>(const r1cs_example<FieldType> &other) = default;
+                    r1cs_example<FieldType>(const r1cs_constraint_system<FieldType> &constraint_system,
+                                            const r1cs_primary_input<FieldType> &primary_input,
+                                            const r1cs_auxiliary_input<FieldType> &auxiliary_input) :
+                        constraint_system(constraint_system),
+                        primary_input(primary_input), auxiliary_input(auxiliary_input) {};
+                    r1cs_example<FieldType>(r1cs_constraint_system<FieldType> &&constraint_system,
+                                            r1cs_primary_input<FieldType> &&primary_input,
+                                            r1cs_auxiliary_input<FieldType> &&auxiliary_input) :
+                        constraint_system(std::move(constraint_system)),
+                        primary_input(std::move(primary_input)), auxiliary_input(std::move(auxiliary_input)) {};
+                };
 
-                }    // namespace detail
             }    // namespace snark
         }        // namespace zk
     }            // namespace crypto3

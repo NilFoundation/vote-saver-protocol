@@ -20,6 +20,7 @@
 #include <boost/program_options.hpp>
 
 #include "detail/r1cs_examples.hpp"
+#include "detail/sha256_component.hpp"
 
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
@@ -69,46 +70,40 @@ int main(int argc, char *argv[]) {
         std::cout << options << std::endl;
         return 0;
     }
-    
-    blueprint<FieldType> bp;
-    blueprint_variable_vector<FieldType> A;
-    A.allocate(bp, n);
-    blueprint_variable_vector<FieldType> B;
-    B.allocate(bp, n);
 
-    blueprint_variable<FieldType> result;
-    result.allocate(bp);
+    std::cout << "SHA2-256 blueprint generation started." << std::endl;
 
-    components::inner_product_component<FieldType> g(bp, A, B, result);
-    g.generate_r1cs_constraints();
+    blueprint<field_type> bp = sha2_two_to_one_bp<field_type>();
 
-    for (std::size_t i = 0; i < 1ul << n; ++i) {
-        for (std::size_t j = 0; j < 1ul << n; ++j) {
-            std::size_t correct = 0;
-            for (std::size_t k = 0; k < n; ++k) {
-                bp.val(A[k]) = (i & (1ul << k) ? FieldType::value_type::one() : FieldType::value_type::zero());
-                bp.val(B[k]) = (j & (1ul << k) ? FieldType::value_type::one() : FieldType::value_type::zero());
-                correct += ((i & (1ul << k)) && (j & (1ul << k)) ? 1 : 0);
-            }
+    std::cout << "SHA2-256 blueprint generation finished." << std::endl;
 
-            g.generate_r1cs_witness();
+    std::cout << "R1CS generation started." << std::endl;
 
-            BOOST_CHECK(bp.val(result) == typename FieldType::value_type(correct));
-            BOOST_CHECK(bp.is_satisfied());
+    r1cs_example<field_type> example =
+        r1cs_example<field_type>(bp.get_constraint_system(), bp.primary_input(), bp.auxiliary_input());
 
-            bp.val(result) = typename FieldType::value_type(100 * n + 19);
-            BOOST_CHECK(!bp.is_satisfied());
-        }
-    }
+    std::cout << "R1CS generation finished." << std::endl;
 
-    zk::snark::detail::r1cs_example<field_type> example =
-        zk::snark::detail::r1cs_example<field_type>(bp.get_constraint_system(), bp.primary_input(), bp.auxiliary_input());
+    //const bool bit = run_r1cs_gg_ppzksnark<CurveType>(example);
+
+    // zk::snark::detail::r1cs_example<field_type> example =
+    //     zk::snark::detail::r1cs_example<field_type>(bp.get_constraint_system(), bp.primary_input(), bp.auxiliary_input());
 
     //zk::snark::r1cs_constraint_system<field_type> constraint_system = bp.get_constraint_system();
 
+    std::cout << "Starting generator" << std::endl;
+
     typename scheme_type::keypair_type keypair = zk::snark::generate<scheme_type>(example.constraint_system);
 
+    std::cout << "Starting prover" << std::endl;
+
     const typename scheme_type::proof_type proof = prove<scheme_type>(keypair.first, example.primary_input, example.auxiliary_input);
+
+    // std::cout << "Starting verifier" << std::endl;
+
+    // const bool ans = verify<basic_proof_system>(keypair.second, example.primary_input, proof);
+
+    // std::cout << "Verifier finished, result: " << ans << std::endl;
 
     if (vm.count("proving-key-output")) {
     }

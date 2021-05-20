@@ -14,7 +14,6 @@
 // limitations under the License.
 //---------------------------------------------------------------------------//
 
-#include <cassert>
 #include <iostream>
 
 #include <boost/filesystem.hpp>
@@ -38,7 +37,7 @@
 
 #include <ton/proof/marshalling/tvm.hpp>
 
-#include <nil/crypto3/zk/snark/components/basic_components.hpp>
+
 
 using namespace nil::crypto3;
 
@@ -70,37 +69,35 @@ int main(int argc, char *argv[]) {
         std::cout << options << std::endl;
         return 0;
     }
-
-    std::size_t n = 10;
-
-    blueprint<field_type> bp;
-    blueprint_variable_vector<field_type> A;
+    
+    blueprint<FieldType> bp;
+    blueprint_variable_vector<FieldType> A;
     A.allocate(bp, n);
-    blueprint_variable_vector<field_type> B;
+    blueprint_variable_vector<FieldType> B;
     B.allocate(bp, n);
 
-    blueprint_variable<field_type> result;
+    blueprint_variable<FieldType> result;
     result.allocate(bp);
 
-    components::inner_product_component<field_type> g(bp, A, B, result);
+    components::inner_product_component<FieldType> g(bp, A, B, result);
     g.generate_r1cs_constraints();
 
     for (std::size_t i = 0; i < 1ul << n; ++i) {
         for (std::size_t j = 0; j < 1ul << n; ++j) {
             std::size_t correct = 0;
             for (std::size_t k = 0; k < n; ++k) {
-                bp.val(A[k]) = (i & (1ul << k) ? field_type::value_type::one() : field_type::value_type::zero());
-                bp.val(B[k]) = (j & (1ul << k) ? field_type::value_type::one() : field_type::value_type::zero());
+                bp.val(A[k]) = (i & (1ul << k) ? FieldType::value_type::one() : FieldType::value_type::zero());
+                bp.val(B[k]) = (j & (1ul << k) ? FieldType::value_type::one() : FieldType::value_type::zero());
                 correct += ((i & (1ul << k)) && (j & (1ul << k)) ? 1 : 0);
             }
 
             g.generate_r1cs_witness();
 
-            assert(bp.val(result) == typename field_type::value_type(correct));
-            assert(bp.is_satisfied());
+            BOOST_CHECK(bp.val(result) == typename FieldType::value_type(correct));
+            BOOST_CHECK(bp.is_satisfied());
 
-            bp.val(result) = typename field_type::value_type(100 * n + 19);
-            assert(!bp.is_satisfied());
+            bp.val(result) = typename FieldType::value_type(100 * n + 19);
+            BOOST_CHECK(!bp.is_satisfied());
         }
     }
 

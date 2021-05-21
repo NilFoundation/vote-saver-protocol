@@ -22,6 +22,3 @@
 [submodule "libs/hash"]
 	path = libs/hash
 	url = git@github.com:nilfoundation/crypto3-hash
-[submodule "libs/pubkey"]
-	path = libs/pubkey
-	url = git@github.com:NilFoundation/crypto3-pubkey.git

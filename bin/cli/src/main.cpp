@@ -47,7 +47,7 @@ typedef typename curve_type::scalar_field_type field_type;
 
 typedef zk::snark::r1cs_gg_ppzksnark<curve_type> scheme_type;
 
-int main(int argc, char *argv[]) {
+int f(int argc, char *argv[]) {
     boost::filesystem::path pout, pkout, vkout;
     boost::program_options::options_description options(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
@@ -124,4 +124,8 @@ int main(int argc, char *argv[]) {
     }
 
     return 0;
+}
+
+int main(){
+    
 }

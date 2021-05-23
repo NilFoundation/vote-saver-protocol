@@ -57,11 +57,11 @@ using namespace nil::crypto3::zk::snark;
 using namespace nil::crypto3::algebra;
 
 template<typename ProofSystem>
-class verifier_data_to_bits;
+struct verifier_data_to_bits;
 
 // TODO: reimplement private functions using field value type trait
 template<typename CurveType>
-class verifier_data_to_bits<r1cs_gg_ppzksnark<CurveType>> {
+struct verifier_data_to_bits<r1cs_gg_ppzksnark<CurveType>> {
     using scheme_type = r1cs_gg_ppzksnark<CurveType>;
 
     constexpr static const std::size_t modulus_bits = CurveType::base_field_type::modulus_bits;
@@ -71,7 +71,7 @@ class verifier_data_to_bits<r1cs_gg_ppzksnark<CurveType>> {
     using chunk_type = std::uint8_t;
 
     constexpr static const std::size_t chunk_size = 8;
-    constexpr static const std::size_t modulus_chunks = modulus_bits / chunk_size + modulus_bits % chunk_size;
+    constexpr static const std::size_t modulus_chunks = modulus_bits / chunk_size + (modulus_bits % chunk_size ? 1 : 0);
 
     template<typename FieldType>
     static inline typename std::enable_if<!::nil::crypto3::detail::is_extended_field<FieldType>::value, void>::type

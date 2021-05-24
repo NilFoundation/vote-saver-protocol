@@ -145,10 +145,25 @@ int main(){
     typename scheme_type::proof_type proof =
         prove<scheme_type>(keypair.first, example.primary_input, example.auxiliary_input);
 
-    std::cout << std::hex << "Obtained proof: " << proof.g_A.X.data << " " << proof.g_A.Y.data << " " << proof.g_A.Z.data << std::endl
-                                                << proof.g_B.X.data[0].data << " " << proof.g_B.Y.data[0].data << " " << proof.g_B.Z.data[0].data << std::endl
-                                                << proof.g_B.X.data[1].data << " " << proof.g_B.Y.data[1].data << " " << proof.g_B.Z.data[1].data << std::endl
-                                                << proof.g_C.X.data << " " << proof.g_C.Y.data << " " << proof.g_C.Z.data << std::endl;
+    std::cout << std::hex << "Obtained proof: " << proof.g_A.to_affine().X.data << " " << proof.g_A.to_affine().Y.data << " " << proof.g_A.to_affine().Z.data << std::endl
+                                                << proof.g_B.to_affine().X.data[0].data << " " << proof.g_B.to_affine().X.data[1].data << " " << proof.g_B.to_affine().Y.data[0].data << std::endl
+                                                << proof.g_B.to_affine().Y.data[1].data << " " << proof.g_B.to_affine().Z.data[0].data << " " << proof.g_B.to_affine().Z.data[1].data << std::endl
+                                                << proof.g_C.to_affine().X.data << " " << proof.g_C.to_affine().Y.data << " " << proof.g_C.to_affine().Z.data << std::endl;
+
+    std::cout << std::hex << "Obtained verification key: " << "gamma_g2: " 
+                                                << keypair.second.gamma_g2.to_affine().X.data[0].data << " " << keypair.second.gamma_g2.to_affine().Y.data[0].data << " " << keypair.second.gamma_g2.to_affine().Z.data[0].data << std::endl
+                                                << keypair.second.gamma_g2.to_affine().X.data[1].data << " " << keypair.second.gamma_g2.to_affine().Y.data[1].data << " " << keypair.second.gamma_g2.to_affine().Z.data[1].data << std::endl
+                                                << "delta_g2: " 
+                                                << keypair.second.delta_g2.to_affine().X.data[0].data << " " << keypair.second.delta_g2.to_affine().Y.data[0].data << " " << keypair.second.delta_g2.to_affine().Z.data[0].data << std::endl
+                                                << keypair.second.delta_g2.to_affine().X.data[1].data << " " << keypair.second.delta_g2.to_affine().Y.data[1].data << " " << keypair.second.delta_g2.to_affine().Z.data[1].data << std::endl;
+
+    std::cout << std::hex << "Obtained primary input: " << std::endl;
+
+    for (auto it = example.primary_input.begin(); it != example.primary_input.end(); it++){
+        std::cout << std::hex << it->data << " " ;
+    }
+    std::cout << std::endl;
+
 
     std::vector<std::uint8_t> verification_key_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
         keypair.second);
@@ -157,7 +172,7 @@ int main(){
     std::vector<std::uint8_t> proof_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
         proof);
 
-    std::cout << "Verification key byteblob" << std::endl;
+    std::cout << "Verification key byteblob, size " << std::dec << verification_key_byteblob.size() << std::endl;
 
     for (auto it = verification_key_byteblob.begin(); it != verification_key_byteblob.end(); ++it){
         std::cout << std::hex << std::size_t(*it) << " " ;
@@ -165,7 +180,7 @@ int main(){
 
     std::cout << std::endl;
 
-    std::cout << "Primary input byteblob" << std::endl;
+    std::cout << "Primary input byteblob, size " << std::dec << primary_input_byteblob.size() << std::endl;
 
     for (auto it = primary_input_byteblob.begin(); it != primary_input_byteblob.end(); ++it){
         std::cout << std::hex << std::size_t(*it) << " " ;
@@ -173,7 +188,7 @@ int main(){
 
     std::cout << std::endl;
 
-    std::cout << "Proof byteblob" << std::endl;
+    std::cout << "Proof byteblob, size " << std::dec << proof_byteblob.size() << std::endl;
 
     for (auto it = proof_byteblob.begin(); it != proof_byteblob.end(); ++it){
         std::cout << std::hex << std::size_t(*it) << " " ;
@@ -183,9 +198,9 @@ int main(){
 
     std::vector<std::uint8_t> byteblob;
 
-    byteblob.insert (byteblob.end(), verification_key_byteblob.begin(), verification_key_byteblob.end());
-    byteblob.insert (byteblob.end(), primary_input_byteblob.begin(), primary_input_byteblob.end());
     byteblob.insert (byteblob.end(), proof_byteblob.begin(), proof_byteblob.end());
+    byteblob.insert (byteblob.end(), primary_input_byteblob.begin(), primary_input_byteblob.end());
+    byteblob.insert (byteblob.end(), verification_key_byteblob.begin(), verification_key_byteblob.end());
 
     std::cout << "Data converted to byte blob" << std::endl;
 

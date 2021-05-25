@@ -218,9 +218,44 @@ int main(){
 
     std::cout << "Starting verifier with plain input" << std::endl;
 
-    const bool ans = verify<scheme_type>(keypair.second, example.primary_input, proof);
+    bool ans = verify<scheme_type>(keypair.second, example.primary_input, proof);
 
     std::cout << "Verifier with plain input finished, result: " << ans << std::endl;
+
+    typename scheme_type::proof_type de_prf = nil::marshalling::verifier_input_deserializer_tvm<scheme_type>::proof_process(proof_byteblob.cbegin(), proof_byteblob.cend());
+    typename scheme_type::primary_input_type de_pi = nil::marshalling::verifier_input_deserializer_tvm<scheme_type>::primary_input_process(primary_input_byteblob.cbegin(), primary_input_byteblob.cend());
+    typename scheme_type::verification_key_type de_vk = nil::marshalling::verifier_input_deserializer_tvm<scheme_type>::verification_key_process(verification_key_byteblob.cbegin(), verification_key_byteblob.cend());
+
+    std::cout << std::hex << "Decoded proof: " << de_prf.g_A.to_affine().X.data << " " << de_prf.g_A.to_affine().Y.data << " " << de_prf.g_A.to_affine().Z.data << std::endl
+                                                << de_prf.g_B.to_affine().X.data[0].data << " " << de_prf.g_B.to_affine().X.data[1].data << " " << de_prf.g_B.to_affine().Y.data[0].data << std::endl
+                                                << de_prf.g_B.to_affine().Y.data[1].data << " " << de_prf.g_B.to_affine().Z.data[0].data << " " << de_prf.g_B.to_affine().Z.data[1].data << std::endl
+                                                << de_prf.g_C.to_affine().X.data << " " << de_prf.g_C.to_affine().Y.data << " " << de_prf.g_C.to_affine().Z.data << std::endl;
+
+    assert (de_prf == proof);
+
+    std::cout << std::hex << "Decoded primary input: " << std::endl;
+
+    for (auto it = de_pi.begin(); it != de_pi.end(); it++){
+        std::cout << std::hex << it->data << " " ;
+    }
+    std::cout << std::endl;
+
+    // assert (de_pi == example.primary_input);
+
+    std::cout << std::hex << "Decoded verification key: " << "gamma_g2: " 
+                                                << de_vk.gamma_g2.to_affine().X.data[0].data << " " << de_vk.gamma_g2.to_affine().Y.data[0].data << " " << de_vk.gamma_g2.to_affine().Z.data[0].data << std::endl
+                                                << de_vk.gamma_g2.to_affine().X.data[1].data << " " << de_vk.gamma_g2.to_affine().Y.data[1].data << " " << de_vk.gamma_g2.to_affine().Z.data[1].data << std::endl
+                                                << "delta_g2: " 
+                                                << de_vk.delta_g2.to_affine().X.data[0].data << " " << de_vk.delta_g2.to_affine().Y.data[0].data << " " << de_vk.delta_g2.to_affine().Z.data[0].data << std::endl
+                                                << de_vk.delta_g2.to_affine().X.data[1].data << " " << de_vk.delta_g2.to_affine().Y.data[1].data << " " << de_vk.delta_g2.to_affine().Z.data[1].data << std::endl;
+
+    assert (de_vk == keypair.second);
+
+    std::cout << "Starting verifier with decoded input" << std::endl;
+
+    ans = verify<scheme_type>(de_vk, de_pi, de_prf);
+
+    std::cout << "Verifier with decoded input finished, result: " << ans << std::endl;
 
     return 0;
 }

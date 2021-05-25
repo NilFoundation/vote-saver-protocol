@@ -112,26 +112,26 @@ int main(int argc, char *argv[]) {
 
     if (vm.count("proof-output")) {
         
-
-        std::vector<std::uint8_t> byteblob;
-
-        std::vector<std::uint8_t> verification_key_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
-            keypair.second);
-        std::vector<std::uint8_t> primary_input_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
-            example.primary_input);
-        std::vector<std::uint8_t> proof_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
-            proof);
-
-        byteblob.insert (byteblob.end(), proof_byteblob.begin(), proof_byteblob.end());
-        byteblob.insert (byteblob.end(), primary_input_byteblob.begin(), primary_input_byteblob.end());
-        byteblob.insert (byteblob.end(), verification_key_byteblob.begin(), verification_key_byteblob.end());
-
-        boost::filesystem::ofstream poutf(pout);
-        for (const auto &v : byteblob) {
-            poutf << v;
-        }
-        poutf.close();
     }
+
+    std::vector<std::uint8_t> byteblob;
+
+    std::vector<std::uint8_t> verification_key_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
+        keypair.second);
+    std::vector<std::uint8_t> primary_input_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
+        example.primary_input);
+    std::vector<std::uint8_t> proof_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
+        proof);
+
+    byteblob.insert (byteblob.end(), proof_byteblob.begin(), proof_byteblob.end());
+    byteblob.insert (byteblob.end(), primary_input_byteblob.begin(), primary_input_byteblob.end());
+    byteblob.insert (byteblob.end(), verification_key_byteblob.begin(), verification_key_byteblob.end());
+
+    boost::filesystem::ofstream poutf(pout);
+    for (const auto &v : byteblob) {
+        poutf << v;
+    }
+    poutf.close();
 
     return 0;
 }

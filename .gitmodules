@@ -22,3 +22,15 @@
 [submodule "libs/hash"]
 	path = libs/hash
 	url = git@github.com:nilfoundation/crypto3-hash
+[submodule "libs/random"]
+	path = libs/random
+	url = git@github.com:nilfoundation/crypto3-random.git
+[submodule "libs/mac"]
+	path = libs/mac
+	url = git@github.com:nilfoundation/crypto3-mac.git
+[submodule "libs/modes"]
+	path = libs/modes
+	url = git@github.com:nilfoundation/crypto3-modes.git
+[submodule "libs/stream"]
+	path = libs/stream
+	url = git@github.com:nilfoundation/crypto3-stream.git

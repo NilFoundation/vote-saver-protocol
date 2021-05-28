@@ -34,3 +34,6 @@
 [submodule "libs/stream"]
 	path = libs/stream
 	url = git@github.com:nilfoundation/crypto3-stream.git
+[submodule "libs/codec"]
+	path = libs/codec
+	url = git@github.com:NilFoundation/crypto3-codec.git

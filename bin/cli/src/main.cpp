@@ -29,8 +29,8 @@
 #include <nil/crypto3/algebra/curves/params/multiexp/bls12.hpp>
 #include <nil/crypto3/algebra/curves/params/wnaf/bls12.hpp>
 
-#include <nil/crypto3/zk/snark/blueprint.hpp>
-#include <nil/crypto3/zk/snark/blueprint_variable.hpp>
+#include <nil/crypto3/zk/components/blueprint.hpp>
+#include <nil/crypto3/zk/components/blueprint_variable.hpp>
 
 #include <nil/crypto3/zk/snark/schemes/ppzksnark/r1cs_gg_ppzksnark.hpp>
 #include <nil/crypto3/zk/snark/schemes/ppzksnark/r1cs_gg_ppzksnark/marshalling.hpp>
@@ -40,6 +40,7 @@
 #include <nil/crypto3/zk/snark/algorithms/prove.hpp>
 
 using namespace nil::crypto3;
+using namespace nil::crypto3::zk;
 
 typedef algebra::curves::bls12<381> curve_type;
 typedef typename curve_type::scalar_field_type field_type;
@@ -72,7 +73,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "SHA2-256 blueprint generation started." << std::endl;
 
-    blueprint<field_type> bp = sha2_two_to_one_bp<field_type>();
+    components::blueprint<field_type> bp = sha2_two_to_one_bp<field_type>();
 
     std::cout << "SHA2-256 blueprint generation finished." << std::endl;
 

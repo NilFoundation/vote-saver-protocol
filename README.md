@@ -53,6 +53,27 @@ the underlying field.
 When running the executable `cli` from within the build directory two files will be created: `proof_data` and `vk_data`
 containing the corresponding data in the form of byteblobs.
 
+
+## Building  solidity contracts
+
+You need to use a **solc compiler** and **tvm linker** with support for these instructions:
+
+- [tvm fork](https://github.com/nilfoundation/tvm-solidity)
+
+- [linker fork](https://github.com/NilFoundation/tvm-lld)
+
+These forks **need to be built using instructions** from repo.
+*You will need `Boost` with `Boost.Filesystem` module to build them.* 
+
+After compilation you will have 2 files: `solc` (solidity compiler) and `tvm_linker` (linker). 
+
+To use these versions through `tondev`: 
+
+- you need to **put these files in the directory** `~/.tondev/solidity`/ 
+
+-  give execution rights (`chmod +x`) to these files *(otherwise `tondev` will crash)*
+
+
 ## Using verification keys and proofs in Solidity
 
 We first take a look at the Solidity file `examples/solidity/verifier.sol` which contains the verification contract

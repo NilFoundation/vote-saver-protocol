@@ -26,20 +26,21 @@
 #ifndef CRYPTO3_BLUEPRINT_SHA256_COMPONENT_TEST_HPP
 #define CRYPTO3_BLUEPRINT_SHA256_COMPONENT_TEST_HPP
 
-#include <nil/crypto3/zk/snark/components/hashes/sha256/sha256_component.hpp>
-#include <nil/crypto3/zk/snark/components/hashes/hash_io.hpp>
+#include <nil/crypto3/zk/components/hashes/sha256/sha256_component.hpp>
+#include <nil/crypto3/zk/components/hashes/hash_io.hpp>
 
-#include <nil/crypto3/zk/snark/blueprint.hpp>
+#include <nil/crypto3/zk/components/blueprint.hpp>
 
 #include <nil/crypto3/hash/sha2.hpp>
 
 using namespace nil::crypto3;
+using namespace nil::crypto3::zk;
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::zk::snark;
 
 template<typename FieldType>
-blueprint<FieldType> sha2_two_to_one_bp() {
-    blueprint<FieldType> bp;
+components::blueprint<FieldType> sha2_two_to_one_bp() {
+    components::blueprint<FieldType> bp;
 
     components::digest_variable<FieldType> left(bp, hashes::sha2<256>::digest_bits);
     components::digest_variable<FieldType> right(bp, hashes::sha2<256>::digest_bits);

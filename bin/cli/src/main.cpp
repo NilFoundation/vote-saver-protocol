@@ -39,6 +39,8 @@
 #include <nil/crypto3/zk/snark/algorithms/verify.hpp>
 #include <nil/crypto3/zk/snark/algorithms/prove.hpp>
 
+#include <nil/marshalling/status_type.hpp>
+
 using namespace nil::crypto3;
 using namespace nil::crypto3::zk;
 
@@ -116,6 +118,18 @@ int main(int argc, char *argv[]) {
     }
 
     std::vector<std::uint8_t> byteblob;
+
+    std::vector<std::uint8_t> proving_key_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
+        keypair.first);
+
+    // nil::marshalling::status_type provingProcessingStatus = nil::marshalling::status_type::success;
+    // typename scheme_type::proving_key_type other = 
+    //             nil::marshalling::verifier_input_deserializer_tvm<scheme_type>::proving_key_process( 
+    //                 proving_key_byteblob.cbegin(), 
+    //                 proving_key_byteblob.cend(),
+    //                 provingProcessingStatus);
+
+    // assert(keypair.first == other);
 
     std::vector<std::uint8_t> verification_key_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
         keypair.second);

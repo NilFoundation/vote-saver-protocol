@@ -50,7 +50,7 @@ typedef typename curve_type::scalar_field_type field_type;
 typedef zk::snark::r1cs_gg_ppzksnark<curve_type> scheme_type;
 
 int main(int argc, char *argv[]) {
-    boost::filesystem::path pout, pkout, vkout;
+    boost::filesystem::path pout, pkout, vkout, piout, viout;
     boost::program_options::options_description options(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
         "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator");
@@ -60,8 +60,11 @@ int main(int argc, char *argv[]) {
     ("generate", "Generate proofs and/or keys")
     ("verify", "verify proofs and/or keys")
     ("proof-output,po", boost::program_options::value<boost::filesystem::path>(&pout)->default_value("proof"))
+    ("primary-input-output,pio", boost::program_options::value<boost::filesystem::path>(&piout)->default_value
+("pinput"))
     ("proving-key-output,pko", boost::program_options::value<boost::filesystem::path>(&pkout)->default_value("pkey"))
-    ("verifying-key-output,vko", boost::program_options::value<boost::filesystem::path>(&vkout)->default_value("vkey"));
+    ("verifying-key-output,vko", boost::program_options::value<boost::filesystem::path>(&viout)->default_value("vkey"))
+    ("verifier-input-output,vio", boost::program_options::value<boost::filesystem::path>(&vkout)->default_value("vio"));
     // clang-format on
 
     boost::program_options::variables_map vm;
@@ -86,12 +89,13 @@ int main(int argc, char *argv[]) {
 
     std::cout << "R1CS generation finished." << std::endl;
 
-    //const bool bit = run_r1cs_gg_ppzksnark<curve_type>(example);
+    // const bool bit = run_r1cs_gg_ppzksnark<curve_type>(example);
 
     // zk::snark::detail::r1cs_example<field_type> example =
-    //     zk::snark::detail::r1cs_example<field_type>(bp.get_constraint_system(), bp.primary_input(), bp.auxiliary_input());
+    //     zk::snark::detail::r1cs_example<field_type>(bp.get_constraint_system(), bp.primary_input(),
+    //     bp.auxiliary_input());
 
-    //zk::snark::r1cs_constraint_system<field_type> constraint_system = bp.get_constraint_system();
+    // zk::snark::r1cs_constraint_system<field_type> constraint_system = bp.get_constraint_system();
 
     std::cout << "Starting generator" << std::endl;
 
@@ -99,7 +103,8 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Starting prover" << std::endl;
 
-    const typename scheme_type::proof_type proof = prove<scheme_type>(keypair.first, example.primary_input, example.auxiliary_input);
+    const typename scheme_type::proof_type proof =
+        prove<scheme_type>(keypair.first, example.primary_input, example.auxiliary_input);
 
     // std::cout << "Starting verifier" << std::endl;
 
@@ -107,46 +112,70 @@ int main(int argc, char *argv[]) {
 
     // std::cout << "Verifier finished, result: " << ans << std::endl;
 
+    std::vector<std::uint8_t> proving_key_byteblob =
+        nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(keypair.first);
+    std::vector<std::uint8_t> verification_key_byteblob =
+        nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(keypair.second);
+    std::vector<std::uint8_t> proof_byteblob =
+        nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(proof);
+    std::vector<std::uint8_t> primary_input_byteblob =
+        nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(example.primary_input);
+
     if (vm.count("proving-key-output")) {
+        boost::filesystem::ofstream out(pkout);
+        for (const auto &v : proving_key_byteblob) {
+            out << v;
+        }
+        out.close();
     }
 
     if (vm.count("verifying-key-output")) {
+        boost::filesystem::ofstream out(vkout);
+        for (const auto &v : verification_key_byteblob) {
+            out << v;
+        }
+        out.close();
     }
 
     if (vm.count("proof-output")) {
-        
+        boost::filesystem::ofstream out(pout);
+        for (const auto &v : proof_byteblob) {
+            out << v;
+        }
+        out.close();
     }
 
-    std::vector<std::uint8_t> byteblob;
-
-    std::vector<std::uint8_t> proving_key_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
-        keypair.first);
+    if (vm.count("primary-input-output")) {
+        boost::filesystem::ofstream out(piout);
+        for (const auto &v : primary_input_byteblob) {
+            out << v;
+        }
+        out.close();
+    }
 
     // nil::marshalling::status_type provingProcessingStatus = nil::marshalling::status_type::success;
-    // typename scheme_type::proving_key_type other = 
-    //             nil::marshalling::verifier_input_deserializer_tvm<scheme_type>::proving_key_process( 
-    //                 proving_key_byteblob.cbegin(), 
+    // typename scheme_type::proving_key_type other =
+    //             nil::marshalling::verifier_input_deserializer_tvm<scheme_type>::proving_key_process(
+    //                 proving_key_byteblob.cbegin(),
     //                 proving_key_byteblob.cend(),
     //                 provingProcessingStatus);
 
     // assert(keypair.first == other);
 
-    std::vector<std::uint8_t> verification_key_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
-        keypair.second);
-    std::vector<std::uint8_t> primary_input_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
-        example.primary_input);
-    std::vector<std::uint8_t> proof_byteblob = nil::marshalling::verifier_input_serializer_tvm<scheme_type>::process(
-        proof);
+    if (vm.count("verifier-input-output")) {
+        std::vector<std::uint8_t> verifier_input_output_byteblob(proof_byteblob.begin(), proof_byteblob.end());
 
-    byteblob.insert (byteblob.end(), proof_byteblob.begin(), proof_byteblob.end());
-    byteblob.insert (byteblob.end(), primary_input_byteblob.begin(), primary_input_byteblob.end());
-    byteblob.insert (byteblob.end(), verification_key_byteblob.begin(), verification_key_byteblob.end());
+        verifier_input_output_byteblob.insert(verifier_input_output_byteblob.end(), primary_input_byteblob.begin(),
+                                              primary_input_byteblob.end());
+        verifier_input_output_byteblob.insert(verifier_input_output_byteblob.end(), verification_key_byteblob.begin(),
+                                              verification_key_byteblob.end());
 
-    boost::filesystem::ofstream poutf(pout);
-    for (const auto &v : byteblob) {
-        poutf << v;
+        boost::filesystem::ofstream poutf(pout);
+        for (const auto &v : verifier_input_output_byteblob) {
+            poutf << v;
+        }
+        poutf.close();
     }
-    poutf.close();
 
     return 0;
 }

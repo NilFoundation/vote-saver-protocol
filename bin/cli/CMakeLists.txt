@@ -39,6 +39,8 @@ target_link_libraries(${CURRENT_PROJECT_NAME}
                       crypto3::multiprecision
                       crypto3::zk
 
+                      nil::marshalling
+
                       ${Boost_LIBRARIES})
 
 target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC

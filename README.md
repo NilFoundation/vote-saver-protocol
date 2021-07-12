@@ -104,3 +104,13 @@ the [Groth16 zk-SNARK policy](https://github.com/NilFoundation/crypto3-zk/blob/m
 
 Byte vector assumes to be byte representation of all the underlying data types, recursively unwrapped to Fp field
 element and integral `std::size_t` values. All the values should be putted in the same order the recursion calculated.
+
+
+
+## Deploy
+
+
+
+1. Add zkp-ready endpoint: `tondev n add nil net.freeton.nil.foundation`
+2. Create / Add your wallet via `tondev signer`
+3. Request test token from Jury

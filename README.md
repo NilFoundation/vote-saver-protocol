@@ -16,6 +16,9 @@ cmake ..
 make cli
 ```
 
+**To update** ```git submodule update --init --recursive```
+
+
 ## Verification instruction VERGRTH16 input creation
 
 To create `VERGRTH16` instruction input you need to represent the 'what you want to prove' in the form of a constraint
@@ -107,10 +110,46 @@ element and integral `std::size_t` values. All the values should be putted in th
 
 
 
-## Deploy
+## Deploy instructions:
 
+### Creating a `SetcodeMultisigWallet` wallet:
 
+[Full instruction is here](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig#install-through-tondev)
 
-1. Add zkp-ready endpoint: `tondev n add nil net.freeton.nil.foundation`
+1. Add ZKP-ready nil's network to `tondev`:
+`tondev network add nil net.freeton.nil.foundation`
 2. Create / Add your wallet via `tondev signer`
-3. Request test token from Jury
+3. Download wallet files:
+```bash 
+wget https://raw.githubusercontent.com/tonlabs/ton-labs-contracts/master/solidity/setcodemultisig/SetcodeMultisigWallet.abi.json
+
+wget https://github.com/tonlabs/ton-labs-contracts/raw/master/solidity/setcodemultisig/SetcodeMultisigWallet.tvc
+```
+4. Get wallet address:
+  `tondev contract info SetcodeMultisigWallet.abi.json -n nil `
+5. Request test token from Jury (Ask to fund this address someone int related telegram group)
+6. Deploy wallet:
+  `tondev contract deploy SetcodeMultisigWallet.abi.json constructor -n nil -i owners:[<YOU_SIGNER_PUBLIC_ADDRESS>],reqConfirms:1`
+
+> Address:   0:<64 hex adress> (calculated from TVC and signer public)
+
+Now you have wallet and can deploy smart contracts. (Congratulations!)
+
+## Deploy smart contract
+
+1. Compile smart contract
+`tondev sol compile verification.sol `
+2. Get address of a contract:
+`tondev contract info verification.abi.json`
+3. Send tokens to address of a contract *(for deploy you will need 10 tokens)*:
+`tondev contract run SetcodeMultisigWallet.abi.json submitTransaction -n nil -i dest:<CONTRACT_ADDRESS>,value:10000000000,bounce:false,allBalance:false,payload:""`
+4. Deploy smart contract:
+`tondev contract deploy verification.abi -n nil`
+5. Interact with smart contract:
+`tondev contract run verification.abi.json verify -p -i proof:$(cat proof.hex) --network nil`
+
+
+---
+
+Check balance of account:
+`tondev contract info -a <ADDRESS> -n nil`

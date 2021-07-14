@@ -16,6 +16,9 @@ cmake ..
 make cli
 ```
 
+**To update** ```git submodule update --init --recursive```
+
+
 ## Verification instruction VERGRTH16 input creation
 
 To create `VERGRTH16` instruction input you need to represent the 'what you want to prove' in the form of a constraint
@@ -104,3 +107,42 @@ the [Groth16 zk-SNARK policy](https://github.com/NilFoundation/crypto3-zk/blob/m
 
 Byte vector assumes to be byte representation of all the underlying data types, recursively unwrapped to Fp field
 element and integral `std::size_t` values. All the values should be putted in the same order the recursion calculated.
+
+
+
+## Deploy instructions:
+
+### Creating a `SetcodeMultisigWallet` wallet:
+
+[Full instruction is here](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig#install-through-tondev)
+
+1. Add ZKP-ready nil's network to `tondev`:
+`tondev network add nil net.freeton.nil.foundation`
+2. Create / Add your wallet via `tondev signer` and save your `<YOU_SIGNER_PUBLIC_ADDRESS>`
+3. Download wallet files:
+```bash 
+wget https://raw.githubusercontent.com/tonlabs/ton-labs-contracts/master/solidity/setcodemultisig/SetcodeMultisigWallet.abi.json
+
+wget https://github.com/tonlabs/ton-labs-contracts/raw/master/solidity/setcodemultisig/SetcodeMultisigWallet.tvc
+```
+4. Get wallet address:
+    `tondev contract info SetcodeMultisigWallet.abi.json -n nil `
+
+  It should be printed as:
+  > Address:   0:<address> (calculated from TVC and signer public)
+
+5. Request test token from Jury (Ask to fund this address someone in related telegram group) to `<address>`
+  - ... Wait for it ...
+  -  now check your balance: `tondev contract info -a 0:<address> -n nil | grep Balance`
+6. Deploy wallet:
+    `tondev contract deploy SetcodeMultisigWallet.abi.json constructor -n nil -i owners:"[0x<YOU_SIGNER_PUBLIC_ADDRESS>]",reqConfirms:1`
+
+You will get something like this:
+>Deploying...
+>Contract has deployed at address: 0:<address>
+
+- Profit!
+
+Now you have wallet and can deploy smart contracts. 
+
+Let's go to deployment step!

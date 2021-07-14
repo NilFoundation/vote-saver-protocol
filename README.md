@@ -166,3 +166,12 @@ Let's go to deployment step!
 `tondev contract deploy verification.abi -n nil`
 5. Verify proof on chain:
 `tondev contract run verification.abi.json verify -p -i proof:$(cat proof.hex) --network nil`
+
+
+## Tests
+Put your tests in a `test` folder.
+1. `cd build`
+2. Build tests:
+`cmake .. -DDBUILD_TESTS=1`
+`make circuit_test`
+3. Run tests: `test/circuit_test`

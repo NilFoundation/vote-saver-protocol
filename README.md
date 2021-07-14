@@ -118,7 +118,7 @@ element and integral `std::size_t` values. All the values should be putted in th
 
 1. Add ZKP-ready nil's network to `tondev`:
 `tondev network add nil net.freeton.nil.foundation`
-2. Create / Add your wallet via `tondev signer`
+2. Create / Add your wallet via `tondev signer` and save your `<YOU_SIGNER_PUBLIC_ADDRESS>`
 3. Download wallet files:
 ```bash 
 wget https://raw.githubusercontent.com/tonlabs/ton-labs-contracts/master/solidity/setcodemultisig/SetcodeMultisigWallet.abi.json
@@ -126,30 +126,23 @@ wget https://raw.githubusercontent.com/tonlabs/ton-labs-contracts/master/solidit
 wget https://github.com/tonlabs/ton-labs-contracts/raw/master/solidity/setcodemultisig/SetcodeMultisigWallet.tvc
 ```
 4. Get wallet address:
-  `tondev contract info SetcodeMultisigWallet.abi.json -n nil `
-5. Request test token from Jury (Ask to fund this address someone int related telegram group)
+    `tondev contract info SetcodeMultisigWallet.abi.json -n nil `
+
+  It should be printed as:
+  > Address:   0:<address> (calculated from TVC and signer public)
+
+5. Request test token from Jury (Ask to fund this address someone in related telegram group) to `<address>`
+  - ... Wait for it ...
+  -  now check your balance: `tondev contract info -a 0:<address> -n nil | grep Balance`
 6. Deploy wallet:
-  `tondev contract deploy SetcodeMultisigWallet.abi.json constructor -n nil -i owners:[<YOU_SIGNER_PUBLIC_ADDRESS>],reqConfirms:1`
+    `tondev contract deploy SetcodeMultisigWallet.abi.json constructor -n nil -i owners:"[0x<YOU_SIGNER_PUBLIC_ADDRESS>]",reqConfirms:1`
 
-> Address:   0:<64 hex adress> (calculated from TVC and signer public)
+You will get something like this:
+>Deploying...
+>Contract has deployed at address: 0:<address>
 
-Now you have wallet and can deploy smart contracts. (Congratulations!)
+- Profit!
 
-## Deploy smart contract
+Now you have wallet and can deploy smart contracts. 
 
-1. Compile smart contract
-`tondev sol compile verification.sol `
-2. Get address of a contract:
-`tondev contract info verification.abi.json`
-3. Send tokens to address of a contract *(for deploy you will need 10 tokens)*:
-`tondev contract run SetcodeMultisigWallet.abi.json submitTransaction -n nil -i dest:<CONTRACT_ADDRESS>,value:10000000000,bounce:false,allBalance:false,payload:""`
-4. Deploy smart contract:
-`tondev contract deploy verification.abi -n nil`
-5. Interact with smart contract:
-`tondev contract run verification.abi.json verify -p -i proof:$(cat proof.hex) --network nil`
-
-
----
-
-Check balance of account:
-`tondev contract info -a <ADDRESS> -n nil`
+Let's go to deployment step!

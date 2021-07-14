@@ -5,7 +5,7 @@ lscs (a.k.a. smart contract) on FreeTON.
 
 Let's see how we can create a Solidity smart contract to generate proofs for that circuit on FreeTON.
 
-## Building 
+## Building
 
 Requirements: Boost >= 1.74.
 
@@ -109,7 +109,6 @@ Byte vector assumes to be byte representation of all the underlying data types, 
 element and integral `std::size_t` values. All the values should be putted in the same order the recursion calculated.
 
 
-
 ## Deploy instructions:
 
 ### Creating a `SetcodeMultisigWallet` wallet:
@@ -146,3 +145,24 @@ You will get something like this:
 Now you have wallet and can deploy smart contracts. 
 
 Let's go to deployment step!
+
+## Deployment
+
+### Moving proof:
+1. Transform binary proof file to hex format for usage with a tondev tool and copy it to a smart contract folder:
+`cat proof | xxd -p | tr -d '\n' > ../examples/lscs/solidity/proof.hex`
+2. cd to smart contract folder
+`cd ../examples/lscs/solidity/`
+
+### Deploy smart contract
+
+1. Compile smart contract
+`tondev sol compile verification.sol `
+2. Get address of a contract:
+`tondev contract info verification.abi.json`
+3. Send tokens to address of a contract *(for deploy you will need 10 tokens)*:
+`tondev contract run SetcodeMultisigWallet.abi.json submitTransaction -n nil -i dest:<CONTRACT_ADDRESS>,value:10000000000,bounce:false,allBalance:false,payload:""`
+4. Deploy smart contract:
+`tondev contract deploy verification.abi -n nil`
+5. Verify proof on chain:
+`tondev contract run verification.abi.json verify -p -i proof:$(cat proof.hex) --network nil`

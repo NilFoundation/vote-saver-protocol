@@ -37,6 +37,3 @@
 [submodule "libs/codec"]
 	path = libs/codec
 	url = git@github.com:NilFoundation/crypto3-codec.git
-[submodule "libs/marshalling"]
-	path = libs/marshalling
-	url = git@github.com:NilFoundation/marshalling.git

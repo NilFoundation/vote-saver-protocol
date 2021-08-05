@@ -13,9 +13,6 @@
 [submodule "libs/blueprint"]
 	path = libs/blueprint
 	url = git@github.com:nilfoundation/crypto3-blueprint.git
-[submodule "libs/fft"]
-	path = libs/fft
-	url = git@github.com:nilfoundation/crypto3-fft.git
 [submodule "libs/block"]
 	path = libs/block
 	url = git@github.com:nilfoundation/crypto3-block.git

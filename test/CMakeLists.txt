@@ -3,7 +3,7 @@ cm_find_package(Boost COMPONENTS unit_test_framework)
 cm_test_link_libraries(
     crypto3::algebra
     crypto3::blueprint
-    crypto3::fft
+    crypto3::math
     crypto3::multiprecision
     crypto3::zk
 ${Boost_LIBRARIES})

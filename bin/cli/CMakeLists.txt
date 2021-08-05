@@ -35,11 +35,14 @@ target_link_libraries(${CURRENT_PROJECT_NAME}
 
                       crypto3::algebra
                       crypto3::blueprint
-                      crypto3::fft
+                      crypto3::math
                       crypto3::multiprecision
                       crypto3::zk
 
-                      nil::marshalling
+                      marshalling::core
+                      marshalling::crypto3_multiprecision
+                      marshalling::crypto3_algebra
+                      marshalling::crypto3_zk
 
                       ${Boost_LIBRARIES})
 

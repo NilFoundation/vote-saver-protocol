@@ -46,3 +46,6 @@
 [submodule "libs/marshalling/multiprecision"]
 	path = libs/marshalling/multiprecision
 	url = git@github.com:NilFoundation/crypto3-multiprecision-marshalling.git
+[submodule "libs/math"]
+	path = libs/math
+	url = git@github.com:NilFoundation/crypto3-math.git

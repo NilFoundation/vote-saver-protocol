@@ -16,6 +16,18 @@ cmake ..
 make cli
 ```
 
+## Building with code optimization
+
+On debug build type, keypair and proof generation can take a long time for big circuits.
+
+To use release build type with -O3 optimization:
+
+```shell
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make cli
+```  
+
 **To update** ```git submodule update --init --recursive```
 
 

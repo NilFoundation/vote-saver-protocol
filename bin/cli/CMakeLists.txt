@@ -52,6 +52,10 @@ target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC
 
                            ${Boost_INCLUDE_DIRS})
 
+if(CMAKE_BUILD_TYPE=="Release")
+set(CMAKE_CXX_FLAGS "-O3")
+endif()
+
 if(APPLE OR NOT ${CMAKE_TARGET_ARCHITECTURE} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
     set_target_properties(${CURRENT_PROJECT_NAME} PROPERTIES
                           XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "${APPLE_CODE_SIGN_IDENTITY}"

@@ -1,4 +1,4 @@
-# TON Proof Verification Contest.
+# TON Cryptography Sub-Governance Contests Template repository.
 
 One of the exciting recent developments around zk-SNARKs is that it is now possible to verify a zk-SNARK proof in a
 lscs (a.k.a. smart contract) on FreeTON. 
@@ -10,7 +10,7 @@ Let's see how we can create a Solidity smart contract to generate proofs for tha
 Requirements: Boost >= 1.74.
 
 ```shell
-git clone --recursive git@github.com:NilFoundation/ton-proof-verification-contest.git contest && cd contest
+git clone --recursive git@github.com:NilFoundation/ton-cryptography-subgovernance-template.git contest && cd contest
 mkdir build && cd build
 cmake ..
 make cli
@@ -73,9 +73,9 @@ containing the corresponding data in the form of byteblobs.
 
 You need to use a **solc compiler** and **tvm linker** with support for these instructions:
 
-- [tvm fork](https://github.com/nilfoundation/tvm-solidity)
+- [solidity compiler fork](https://github.com/nilfoundation/tvm-solidity)
 
-- [linker fork](https://github.com/NilFoundation/tvm-lld)
+- [linker fork](https://github.com/NilFoundation/tvm-linker)
 
 These forks **need to be built using instructions** from repo.
 *You will need `Boost` with `Boost.Filesystem` module to build them.* 
@@ -127,8 +127,8 @@ element and integral `std::size_t` values. All the values should be putted in th
 
 [Full instruction is here](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig#install-through-tondev)
 
-1. Add ZKP-ready nil's network to `tondev`:
-`tondev network add nil net.freeton.nil.foundation`
+1. Add ZKP-ready FLD network to `tondev`:
+`tondev network add fld gql.custler.net`
 2. Create / Add your wallet via `tondev signer` and save your `<YOU_SIGNER_PUBLIC_ADDRESS>`
 3. Download wallet files:
 ```bash 
@@ -137,16 +137,16 @@ wget https://raw.githubusercontent.com/tonlabs/ton-labs-contracts/master/solidit
 wget https://github.com/tonlabs/ton-labs-contracts/raw/master/solidity/setcodemultisig/SetcodeMultisigWallet.tvc
 ```
 4. Get wallet address:
-    `tondev contract info SetcodeMultisigWallet.abi.json -n nil `
+    `tondev contract info SetcodeMultisigWallet.abi.json -n fld `
 
   It should be printed as:
   > Address:   0:<address> (calculated from TVC and signer public)
 
 5. Request test token from Jury (Ask to fund this address someone in related telegram group) to `<address>`
   - ... Wait for it ...
-  -  now check your balance: `tondev contract info -a 0:<address> -n nil | grep Balance`
+  -  now check your balance: `tondev contract info -a 0:<address> -n fld | grep Balance`
 6. Deploy wallet:
-    `tondev contract deploy SetcodeMultisigWallet.abi.json constructor -n nil -i owners:"[0x<YOU_SIGNER_PUBLIC_ADDRESS>]",reqConfirms:1`
+    `tondev contract deploy SetcodeMultisigWallet.abi.json constructor -n fld -i owners:"[0x<YOU_SIGNER_PUBLIC_ADDRESS>]",reqConfirms:1`
 
 You will get something like this:
 >Deploying...

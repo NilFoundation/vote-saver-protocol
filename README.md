@@ -1,4 +1,4 @@
-# TON Cryptography Sub-Governance Contests Template repository.
+# TON Proof Verification Protocol Template repository.
 
 One of the exciting recent developments around zk-SNARKs is that it is now possible to verify a zk-SNARK proof in a
 lscs (a.k.a. smart contract) on FreeTON. 

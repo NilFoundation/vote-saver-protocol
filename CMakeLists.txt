@@ -47,7 +47,3 @@ add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs"
                    SUBMODULE_DEFINITION_HEADER "cm_project\\(")
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/bin")
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs/marshalling")
-
-if(BUILD_TESTS)
-    add_subdirectory(test)
-endif()

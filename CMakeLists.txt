@@ -40,7 +40,7 @@ endmacro()
 option(BUILD_TESTS "Build unit tests" TRUE)
 
 if(NOT Boost_FOUND)
-    cm_find_package(Boost REQUIRED COMPONENTS program_options system)
+    cm_find_package(Boost REQUIRED COMPONENTS program_options system random)
 endif()
 
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs"

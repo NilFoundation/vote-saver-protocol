@@ -10,9 +10,6 @@
 [submodule "libs/zk"]
 	path = libs/zk
 	url = git@github.com:nilfoundation/crypto3-zk.git
-[submodule "libs/blueprint"]
-	path = libs/blueprint
-	url = git@github.com:nilfoundation/crypto3-blueprint.git
 [submodule "libs/block"]
 	path = libs/block
 	url = git@github.com:nilfoundation/crypto3-block.git
@@ -49,3 +46,15 @@
 [submodule "libs/math"]
 	path = libs/math
 	url = git@github.com:NilFoundation/crypto3-math.git
+[submodule "libs/pubkey"]
+	path = libs/pubkey
+	url = git@github.com:NilFoundation/crypto3-pubkey.git
+[submodule "libs/pkpad"]
+	path = libs/pkpad
+	url = git@github.com:NilFoundation/crypto3-pkpad.git
+[submodule "libs/blueprint-dev"]
+	path = libs/blueprint-dev
+	url = git@github.com:NilFoundation/crypto3-blueprint-dev.git
+[submodule "libs/containers"]
+	path = libs/containers
+	url = git@github.com:NilFoundation/crypto3-containers.git

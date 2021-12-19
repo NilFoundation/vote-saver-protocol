@@ -38,6 +38,7 @@ target_link_libraries(${CURRENT_PROJECT_NAME}
                       crypto3::math
                       crypto3::multiprecision
                       crypto3::zk
+                      crypto3::pubkey
 
                       marshalling::core
                       marshalling::crypto3_multiprecision

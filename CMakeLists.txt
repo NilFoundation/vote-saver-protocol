@@ -37,6 +37,7 @@ macro(cm_find_package NAME)
     endif()
 endmacro()
 
+option(BUILD_SHARED_LIBS "Build shared library" TRUE)
 option(BUILD_TESTS "Build unit tests" TRUE)
 
 if(NOT Boost_FOUND)

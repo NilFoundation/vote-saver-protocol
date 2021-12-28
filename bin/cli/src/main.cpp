@@ -41,8 +41,8 @@
 #include <nil/crypto3/zk/components/blueprint_variable.hpp>
 #include <nil/crypto3/zk/components/disjunction.hpp>
 
-#include <nil/crypto3/zk/snark/schemes/ppzksnark/r1cs_gg_ppzksnark.hpp>
-#include <nil/crypto3/zk/snark/schemes/ppzksnark/r1cs_gg_ppzksnark/marshalling.hpp>
+#include <nil/crypto3/zk/snark/systems/ppzksnark/r1cs_gg_ppzksnark.hpp>
+#include <nil/crypto3/zk/snark/systems/ppzksnark/r1cs_gg_ppzksnark/marshalling.hpp>
 
 #include <nil/crypto3/zk/snark/algorithms/generate.hpp>
 #include <nil/crypto3/zk/snark/algorithms/verify.hpp>
@@ -55,7 +55,10 @@
 
 #include <nil/crypto3/pubkey/algorithm/generate_keypair.hpp>
 #include <nil/crypto3/pubkey/algorithm/encrypt.hpp>
+#include <nil/crypto3/pubkey/algorithm/decrypt.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify_encryption.hpp>
+#include <nil/crypto3/pubkey/algorithm/verify_decryption.hpp>
+#include <nil/crypto3/pubkey/algorithm/rerandomize.hpp>
 #include <nil/crypto3/pubkey/elgamal_verifiable.hpp>
 #include <nil/crypto3/pubkey/modes/verifiable_encryption.hpp>
 
@@ -317,7 +320,7 @@ struct enc_input_policy {
     using merkle_hash_type = typename merkle_hash_component::hash_type;
     using field_type = typename hash_component::field_type;
     static constexpr std::size_t arity = 2;
-    static constexpr std::size_t tree_depth = 1;
+    static constexpr std::size_t tree_depth = 2;
     using voting_component =
         components::encrypted_input_voting<arity, hash_component, merkle_hash_component, field_type>;
     using merkle_proof_component = typename voting_component::merkle_proof_component;
@@ -343,8 +346,16 @@ typename std::enable_if<std::is_unsigned<ValueType>::value, std::vector<std::arr
 }
 
 void process_encrypted_input_mode(const boost::program_options::variables_map &vm) {
-    std::cout << "Merkle tree generation started..." << std::endl;
-    constexpr std::size_t participants_number = 1 << enc_input_policy::tree_depth;
+    std::size_t tree_depth = 0;
+    if (vm.count("tree-depth")) {
+        tree_depth = vm["tree-depth"].as<std::size_t>();
+    } else {
+        std::cerr << "Tree depth is not specified!" << std::endl;
+    }
+
+    std::size_t participants_number = 1 << tree_depth;
+    std::cout << "There will be " << participants_number << " number of participants in voting." << std::endl;
+
     auto secret_keys = generate_random_data<bool, enc_input_policy::hash_type::digest_bits>(participants_number);
     std::vector<std::array<bool, enc_input_policy::hash_type::digest_bits>> public_keys;
     for (const auto &sk : secret_keys) {
@@ -352,13 +363,23 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         hash<enc_input_policy::merkle_hash_type>(sk, std::begin(pk));
         public_keys.emplace_back(pk);
     }
+    std::cout << "Participants key pairs generated." << std::endl;
+
+    std::cout << "Merkle tree generation upon participants public keys started..." << std::endl;
     containers::merkle_tree<enc_input_policy::merkle_hash_type, enc_input_policy::arity> tree(public_keys);
-    std::size_t proof_idx = std::rand() % participants_number;
-    containers::merkle_proof<enc_input_policy::merkle_hash_type, enc_input_policy::arity> proof(tree, proof_idx);
-    auto tree_pk_leaf = tree[proof_idx];
     std::cout << "Merkle tree generation finished." << std::endl;
 
+    std::size_t proof_idx = std::rand() % participants_number;
+    std::cout << "Participant with index " << proof_idx << " (vote sender) generates its merkle copath.";
+    containers::merkle_proof<enc_input_policy::merkle_hash_type, enc_input_policy::arity> proof(tree, proof_idx);
+    auto tree_pk_leaf = tree[proof_idx];
+
     std::vector<bool> m = {0, 1, 0, 0, 0, 0, 0};
+    std::cout << "Sender is willing to vote with the following ballot: { ";
+    for (auto m_i : m) {
+        std::cout << int(m_i);
+    }
+    std::cout << "}" << std::endl;
     std::vector<typename enc_input_policy::pairing_curve_type::scalar_field_type::value_type> m_field;
     for (const auto m_i : m) {
         m_field.emplace_back(std::size_t(m_i));
@@ -367,13 +388,23 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     const std::size_t eid_size = 64;
     std::vector<bool> eid(eid_size);
     std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
+    std::cout << "Voting session (eid) is: ";
+    for (auto i : eid) {
+        std::cout << int(i);
+    }
+    std::cout << std::endl;
 
     std::vector<bool> eid_sk;
     std::copy(std::cbegin(eid), std::cend(eid), std::back_inserter(eid_sk));
     std::copy(std::cbegin(secret_keys[proof_idx]), std::cend(secret_keys[proof_idx]), std::back_inserter(eid_sk));
     std::vector<bool> sn = hash<enc_input_policy::hash_type>(eid_sk);
+    std::cout << "Sender has following serial number (sn) in current session: ";
+    for (auto i : sn) {
+        std::cout << int(i);
+    }
+    std::cout << std::endl;
 
-    std::cout << "Blueprint generation started..." << std::endl;
+    std::cout << "Voting system administrator generates R1CS..." << std::endl;
     components::blueprint<enc_input_policy::field_type> bp;
     components::block_variable<enc_input_policy::field_type> m_block(bp, m.size());
     components::block_variable<enc_input_policy::field_type> eid_block(bp, eid.size());
@@ -388,9 +419,6 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     enc_input_policy::voting_component vote_var(bp, m_block, eid_block, sn_digest, root_digest, address_bits_va,
                                                 path_var, sk_block,
                                                 components::blueprint_variable<enc_input_policy::field_type>(0));
-    std::cout << "Blueprint generation finished." << std::endl;
-
-    std::cout << "R1CS generation started..." << std::endl;
     path_var.generate_r1cs_constraints();
     vote_var.generate_r1cs_constraints();
     std::cout << "R1CS generation finished." << std::endl;
@@ -409,15 +437,18 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     assert(!bp.is_satisfied());
     vote_var.generate_r1cs_witness(tree.root(), sn);
     assert(bp.is_satisfied());
-
-    std::cout << "Constraints number: " << bp.num_constraints() << std::endl;
+    std::cout << "Constraints number in the generated R1CS: " << bp.num_constraints() << std::endl;
 
     bp.set_input_sizes(vote_var.get_input_size());
 
-    std::cout << "Keys generation started..." << std::endl;
+    std::cout << "Administrator generates CRS..." << std::endl;
     typename enc_input_policy::proof_system::keypair_type gg_keypair =
         snark::generate<enc_input_policy::proof_system>(bp.get_constraint_system());
+    std::cout << "CRS generation finished." << std::endl;
 
+    std::cout
+        << "Administrator generates private, public and verification keys for El-Gamal verifiable encryption scheme..."
+        << std::endl;
     random::algebraic_random_device<typename enc_input_policy::pairing_curve_type::scalar_field_type> d;
     std::vector<typename enc_input_policy::pairing_curve_type::scalar_field_type::value_type> rnd;
     for (std::size_t i = 0; i < m.size() * 3 + 2; ++i) {
@@ -427,14 +458,15 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         generate_keypair<enc_input_policy::encryption_scheme_type,
                          modes::verifiable_encryption<enc_input_policy::encryption_scheme_type>>(
             rnd, {gg_keypair, m.size()});
-    std::cout << "Keys generation finished." << std::endl;
+    std::cout << "Private, public and verification keys for El-Gamal verifiable encryption scheme generated."
+              << std::endl;
 
-    std::cout << "Proving started..." << std::endl;
+    std::cout << "Sender generates its vote consisting of proof and cipher text..." << std::endl;
     typename enc_input_policy::encryption_scheme_type::cipher_type cipher_text =
         encrypt<enc_input_policy::encryption_scheme_type,
                 modes::verifiable_encryption<enc_input_policy::encryption_scheme_type>>(
             m_field, {d(), std::get<0>(keypair), gg_keypair, bp.primary_input(), bp.auxiliary_input()});
-    std::cout << "Proving finished." << std::endl;
+    std::cout << "Vote generated." << std::endl;
 
     std::cout << "Marshalling started..." << std::endl;
     typename enc_input_policy::proof_system::primary_input_type pinput = bp.primary_input();
@@ -444,12 +476,43 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         cipher_text.first);
     std::cout << "Marshalling finished." << std::endl;
 
+    std::cout << "Administrator rerandomizes cipher text and proof..." << std::endl;
+    std::vector<typename enc_input_policy::pairing_curve_type::scalar_field_type::value_type> rnd_rerandomization;
+    for (std::size_t i = 0; i < 3; ++i) {
+        rnd_rerandomization.emplace_back(d());
+    }
+    typename enc_input_policy::encryption_scheme_type::cipher_type rerand_cipher_text =
+        rerandomize<enc_input_policy::encryption_scheme_type>(rnd_rerandomization, cipher_text.first,
+                                                              {std::get<0>(keypair), gg_keypair, cipher_text.second});
+    std::cout << "Rerandomization finished." << std::endl;
+
+    std::cout << "Sender verifies rerandomized by the administrator encrypted ballot and proof..." << std::endl;
     bool enc_verification_ans = verify_encryption<enc_input_policy::encryption_scheme_type>(
-        cipher_text.first,
-        {std::get<0>(keypair), gg_keypair.second, cipher_text.second,
+        rerand_cipher_text.first,
+        {std::get<0>(keypair), gg_keypair.second, rerand_cipher_text.second,
          typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + m.size(),
                                                                       std::cend(pinput)}});
     assert(enc_verification_ans);
+    std::cout << "Encryption verification finished." << std::endl;
+
+    std::cout << "Administrator decrypts ballot from rerandomized cipher text and generates decryption proof..."
+              << std::endl;
+    typename enc_input_policy::encryption_scheme_type::decipher_type decipher_rerand_text =
+        decrypt<enc_input_policy::encryption_scheme_type,
+                modes::verifiable_encryption<enc_input_policy::encryption_scheme_type>>(
+            rerand_cipher_text.first, {std::get<1>(keypair), std::get<2>(keypair), gg_keypair});
+    assert(decipher_rerand_text.first.size() == m_field.size());
+    for (std::size_t i = 0; i < m_field.size(); ++i) {
+        assert(decipher_rerand_text.first[i] == m_field[i]);
+    }
+    std::cout << "Decryption finished." << std::endl;
+
+    std::cout << "Any voter could verify decryption using decryption proof..." << std::endl;
+    bool dec_verification_ans = verify_decryption<enc_input_policy::encryption_scheme_type>(
+        rerand_cipher_text.first, decipher_rerand_text.first,
+        {std::get<2>(keypair), gg_keypair, decipher_rerand_text.second});
+    assert(dec_verification_ans);
+    std::cout << "Decryption verification finished." << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -459,8 +522,8 @@ int main(int argc, char *argv[]) {
     using endianness = nil::marshalling::option::big_endian;
     using proof_system_type = zk::snark::r1cs_gg_ppzksnark<curve_type>;
 
-    //    std::filesystem::path proof_path, pk_path, vk_path, pi_path, vi_path;
     std::string mode;
+    std::size_t tree_depth;
     boost::program_options::options_description desc(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
         "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator.");
@@ -475,7 +538,8 @@ int main(int argc, char *argv[]) {
     ("verifying-key-output,vko", boost::program_options::value<std::filesystem::path>()->default_value("verification_key.bin"), "Verification output path.")
     ("verifier-input-output,vio", boost::program_options::value<std::filesystem::path>()->default_value("verification_input.bin"), "Verification input output path.")
     ("public-key-output,pubko", boost::program_options::value<std::filesystem::path>()->default_value("public_key.bin"), "Public key output path (for encrypted_input mode only).")
-    ("cipher-text-output,cto", boost::program_options::value<std::filesystem::path>()->default_value("cipher_text.bin"), "Cipher text output path (for encrypted_input mode only).");
+    ("cipher-text-output,cto", boost::program_options::value<std::filesystem::path>()->default_value("cipher_text.bin"), "Cipher text output path (for encrypted_input mode only).")
+    ("tree-depth,td", boost::program_options::value<std::size_t>()->default_value(enc_input_policy::tree_depth), "Depth of Merkle tree built upon participants' public keys (for encrypted_input mode only).");
     // clang-format on
 
     boost::program_options::variables_map vm;

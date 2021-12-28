@@ -354,7 +354,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     }
 
     std::size_t participants_number = 1 << tree_depth;
-    std::cout << "There will be " << participants_number << " number of participants in voting." << std::endl;
+    std::cout << "There will be " << participants_number << "  participants in voting." << std::endl;
 
     auto secret_keys = generate_random_data<bool, enc_input_policy::hash_type::digest_bits>(participants_number);
     std::vector<std::array<bool, enc_input_policy::hash_type::digest_bits>> public_keys;
@@ -370,7 +370,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     std::cout << "Merkle tree generation finished." << std::endl;
 
     std::size_t proof_idx = std::rand() % participants_number;
-    std::cout << "Participant with index " << proof_idx << " (vote sender) generates its merkle copath.";
+    std::cout << "Participant with index " << proof_idx << " (vote sender) generates its merkle copath." << std::endl;
     containers::merkle_proof<enc_input_policy::merkle_hash_type, enc_input_policy::arity> proof(tree, proof_idx);
     auto tree_pk_leaf = tree[proof_idx];
 
@@ -379,7 +379,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     for (auto m_i : m) {
         std::cout << int(m_i);
     }
-    std::cout << "}" << std::endl;
+    std::cout << " }" << std::endl;
     std::vector<typename enc_input_policy::pairing_curve_type::scalar_field_type::value_type> m_field;
     for (const auto m_i : m) {
         m_field.emplace_back(std::size_t(m_i));

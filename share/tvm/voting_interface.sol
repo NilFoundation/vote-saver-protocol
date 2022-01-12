@@ -25,7 +25,6 @@ library SharedStructs {
         uint voters_number;
         bytes pk_eid;
         bytes vk_eid;
-        mapping(address => uint256) voter_map_pubkey;
         mapping(address => optional(Ballot)) voter_map_ballot;
         bytes rt;
     }

@@ -25,8 +25,7 @@ rt = '2345'
 elgamal_pk = '7890'
 elgamal_vk = '5634'
 chosen_voters_addresses = [inst.address for inst in voters_instances[:]]
-chosen_voters_pubkeys = [inst.public_key_ for inst in voters_instances[:]]
-admin_instance.call_method_signed('init_voting_session', {'eid': eid, 'pk_eid': elgamal_pk, 'vk_eid': elgamal_vk, 'voters_addresses': chosen_voters_addresses, 'voters_pubkeys': chosen_voters_pubkeys, 'rt': rt})
+admin_instance.call_method_signed('init_voting_session', {'eid': eid, 'pk_eid': elgamal_pk, 'vk_eid': elgamal_vk, 'voters_addresses': chosen_voters_addresses, 'rt': rt})
 ts4.dispatch_messages()
 
 for inst, ballot in zip(voters_instances, voters_ballots):

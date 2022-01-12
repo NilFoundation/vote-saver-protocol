@@ -3,24 +3,24 @@ pragma ton-solidity >= 0.30.0;
 import "voting_interface.sol";
 
 contract SaverVoter is IVoter {
-    constructor(bytes pk, address current_admin) public {
-        require(tvm.pubkey() != 0, 101);
-        require(msg.pubkey() == tvm.pubkey(), 102);
+    constructor(bytes pk, address admin) public {
+        require(tvm.pubkey() != 0, 201);
+        require(msg.pubkey() == tvm.pubkey(), 202);
         tvm.accept();
 
         m_pk = pk;
-        m_current_admin = current_admin;
+        m_current_admin = admin;
     }
 
     modifier checkOwnerAndAccept {
-        require(msg.pubkey() == tvm.pubkey(), 103);
+        require(msg.pubkey() == tvm.pubkey(), 203);
         tvm.accept();
         _;
     }
 
     modifier checkAdminAndAccept {
-        require(msg.pubkey() != 0, 104);
-        require(msg.sender == m_current_admin, 105);
+        require(msg.pubkey() != 0, 204);
+        require(msg.sender == m_current_admin, 205);
         tvm.accept();
         _;
     }
@@ -33,12 +33,13 @@ contract SaverVoter is IVoter {
         m_current_admin = new_admin;
     }
 
-    function vote(bytes eid, bytes sn, bytes proof, bytes ct) public view checkOwnerAndAccept returns (bool) {
+    function vote(bytes eid, bytes sn, bytes proof, bytes ct) public view checkOwnerAndAccept {
+        tvm.accept();
         SharedStructs.Ballot ballot;
         ballot.sn = sn;
         ballot.proof = proof;
         ballot.ct = ct;
-        return IAdmin(m_current_admin).send_ballot(eid, ballot).await;
+        IAdmin(m_current_admin).send_ballot(eid, ballot);
     }
 
     // @return (status, sn, proof, ct)

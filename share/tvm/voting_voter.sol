@@ -31,52 +31,47 @@ contract SaverVoter is IVoter {
     }
 
     function reset_ballot() public checkOwnerAndAccept {
-        m_ballot.eid = "";
-        m_ballot.sn = "";
-        m_ballot.proof = "";
-        m_ballot.ct = "";
-
-        m_proof = "";
-        m_ct = "";
+        m_ballot = null;
 
         IAdmin(m_current_admin).uncommit_ballot{callback: on_uncommit_ballot}();
     }
 
-    function update_ballot(bytes eid, bytes sn, bytes proof, bytes ct, bytes proof_rerand, bytes ct_rerand) public checkOwnerAndAccept {
-        m_ballot.eid.append(eid);
-        m_ballot.sn.append(sn);
-        m_ballot.proof.append(proof_rerand);
-        m_ballot.ct.append(ct_rerand);
-
-        m_proof.append(proof);
-        m_ct.append(ct);
+    function update_ballot(bytes eid, bytes sn, bytes proof_rerand, bytes ct_rerand) public checkOwnerAndAccept {
+        if (!m_ballot.hasValue()) {
+            m_ballot = SharedStructs.Ballot("", "", "", "");
+        }
+        m_ballot.get().eid.append(eid);
+        m_ballot.get().sn.append(sn);
+        m_ballot.get().proof.append(proof_rerand);
+        m_ballot.get().ct.append(ct_rerand);
 
         IAdmin(m_current_admin).uncommit_ballot{callback: on_uncommit_ballot}();
     }
 
-    function commit_ballot() public checkOwnerAndAccept {
-        require(!SharedStructs.cmp_bytes(m_ballot.ct, m_ct), 205);
-        require(!SharedStructs.cmp_bytes(m_ballot.proof, m_proof), 206);
+    function commit_ballot() public view checkOwnerAndAccept {
+        require(m_ballot.hasValue(), 207);
 
         bytes verification_input;
-        verification_input.append(m_proof);
+        verification_input.append(m_ballot.get().proof);
         verification_input.append(m_crs_vk);
         verification_input.append(m_pk_eid);
-        verification_input.append(m_ct);
-        verification_input.append(m_ballot.eid);
-        verification_input.append(m_ballot.sn);
+        verification_input.append(m_ballot.get().ct);
+        verification_input.append(m_ballot.get().eid);
+        verification_input.append(m_ballot.get().sn);
         verification_input.append(m_rt);
-        require(tvm.vergrth16(verification_input), 207);
+        require(tvm.vergrth16(verification_input), 208);
 
-        m_is_vote_accepted = false;
-        IAdmin(m_current_admin).check_ballot{callback: on_check_ballot}(m_ballot.eid, m_ballot.sn);
+        IAdmin(m_current_admin).check_ballot{callback: on_check_ballot}(m_ballot.get().eid, m_ballot.get().sn);
     }
 
     function get_ct() external checkAdminAndAccept responsible override returns (optional(bytes)) {
+        if (!m_ballot.hasValue()) {
+            return null;
+        }
         if (!m_is_vote_accepted) {
             return null;
         }
-        return m_ballot.ct;
+        return m_ballot.get().ct;
     }
 
     function on_get_session_data(bytes crs_vk, bytes pk_eid, bytes rt) public checkAdminAndAccept {
@@ -101,7 +96,5 @@ contract SaverVoter is IVoter {
     bytes public m_rt;
     bytes public m_pk;
     bool public m_is_vote_accepted;
-    SharedStructs.Ballot public m_ballot;
-    bytes private m_proof;
-    bytes private m_ct;
+    optional(SharedStructs.Ballot) public m_ballot;
 }

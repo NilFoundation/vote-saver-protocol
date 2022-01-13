@@ -58,7 +58,6 @@ contract SaverVoter is IVoter {
         require(!SharedStructs.cmp_bytes(m_ballot.ct, m_ct), 205);
         require(!SharedStructs.cmp_bytes(m_ballot.proof, m_proof), 206);
 
-        // TODO: vergrth16
         bytes verification_input;
         verification_input.append(m_proof);
         verification_input.append(m_crs_vk);
@@ -67,7 +66,7 @@ contract SaverVoter is IVoter {
         verification_input.append(m_ballot.eid);
         verification_input.append(m_ballot.sn);
         verification_input.append(m_rt);
-        // require(tvm.vergrth16(verification_input), 207);
+        require(tvm.vergrth16(verification_input), 207);
 
         m_is_vote_accepted = false;
         IAdmin(m_current_admin).check_ballot{callback: on_check_ballot}(m_ballot.eid, m_ballot.sn);

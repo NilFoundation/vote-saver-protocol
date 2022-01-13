@@ -342,6 +342,8 @@ struct marshaling_verification_data_groth16_encrypted_input {
             auto filename = vm["rt-output"].as<std::string>() + std::to_string(proof_idx) + ".bin";
             write_obj(std::filesystem::path(filename), {rt_blob});
         }
+        std::cout << "pinput len: " <<  pinput_blob.size() << std::endl;
+        std::cout << "sum len: " << eid_blob.size() + sn_blob.size() + rt_blob.size() << std::endl;
     }
 };
 

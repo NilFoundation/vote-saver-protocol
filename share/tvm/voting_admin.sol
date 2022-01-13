@@ -3,13 +3,10 @@ pragma ton-solidity >= 0.30.0;
 import "voting_interface.sol";
 
 contract SaverAdmin is IAdmin {
-    constructor(bytes pk, bytes vk) public {
+    constructor() public {
         require(tvm.pubkey() != 0, 101);
         require(msg.pubkey() == tvm.pubkey(), 102);
         tvm.accept();
-
-        m_crs.pk = pk;
-        m_crs.vk = vk;
     }
 
     modifier checkOwnerAndAccept {
@@ -21,6 +18,32 @@ contract SaverAdmin is IAdmin {
     modifier checkSenderIsVoter {
         require(m_session_state.voter_map_accepted.exists(msg.sender), 104);
         _;
+    }
+
+    function update_crs(bytes pk, bytes vk) public checkOwnerAndAccept {
+        m_crs.pk.append(pk);
+        m_crs.vk.append(vk);
+    }
+
+    function reset_crs() public checkOwnerAndAccept {
+        m_crs.pk = hex"";
+        m_crs.vk = hex"";
+    }
+
+    function reset_context() public checkOwnerAndAccept {
+        m_session_state.voters_number = 0;
+        m_session_state.pk_eid = hex"";
+        m_session_state.vk_eid = hex"";
+        m_session_state.rt = hex"";
+        mapping(address => bool) m1;
+        m_session_state.voter_map_accepted = m1;
+
+        m_eid = hex"";
+
+        mapping(bytes => optional(bool)) m2;
+        mapping(bytes => optional(bool)) m3;
+        m_all_eid = m2;
+        m_all_sn = m3;
     }
 
     function init_voting_session(bytes eid, bytes pk_eid, bytes vk_eid, address[] voters_addresses, bytes rt) public checkOwnerAndAccept {

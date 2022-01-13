@@ -10,7 +10,7 @@ contract SaverVoter is IVoter {
 
         m_pk = pk;
         m_current_admin = admin;
-        IAdmin(admin).get_session_data{callback: on_get_session_data}();
+//        IAdmin(admin).get_session_data{callback: on_get_session_data}();
     }
 
     modifier checkOwnerAndAccept {
@@ -27,7 +27,7 @@ contract SaverVoter is IVoter {
 
     function update_admin(address new_admin) public checkOwnerAndAccept {
         m_current_admin = new_admin;
-        IAdmin(new_admin).get_session_data{callback: on_get_session_data}();
+//        IAdmin(new_admin).get_session_data{callback: on_get_session_data}();
     }
 
     function reset_ballot() public checkOwnerAndAccept {
@@ -48,18 +48,40 @@ contract SaverVoter is IVoter {
         IAdmin(m_current_admin).uncommit_ballot{callback: on_uncommit_ballot}();
     }
 
+    function reset_verification_input() public checkOwnerAndAccept {
+        m_vi = hex"";
+    }
+
+    function update_verification_input(bytes vi) public checkOwnerAndAccept {
+        m_vi.append(vi);
+    }
+
+    function reset_session_date() public checkOwnerAndAccept {
+        m_crs_vk = hex"";
+        m_pk_eid = hex"";
+        m_rt = hex"";
+    }
+
+    function update_session_data(bytes crs_vk, bytes pk_eid, bytes rt) public checkOwnerAndAccept {
+        m_crs_vk.append(crs_vk);
+        m_pk_eid.append(pk_eid);
+        m_rt.append(rt);
+    }
+
     function commit_ballot() public view checkOwnerAndAccept {
         require(m_ballot.hasValue(), 207);
 
         bytes verification_input = hex"01";
-        verification_input.append(m_ballot.get().proof);
-        verification_input.append(m_crs_vk);
-        verification_input.append(m_pk_eid);
-        verification_input.append(m_ballot.get().ct);
-        verification_input.append(m_ballot.get().eid);
-        verification_input.append(m_ballot.get().sn);
-        verification_input.append(m_rt);
-        require(tvm.vergrth16(verification_input), 208);
+//        verification_input.append(m_ballot.get().proof);
+//        verification_input.append(m_crs_vk);
+//        verification_input.append(m_pk_eid);
+//        verification_input.append(m_ballot.get().ct);
+//        verification_input.append(m_ballot.get().eid);
+//        verification_input.append(m_ballot.get().sn);
+//        verification_input.append(m_rt);
+        verification_input.append(m_vi);
+        bool ans = tvm.vergrth16(verification_input);
+        require(ans, 208);
 
         IAdmin(m_current_admin).check_ballot{callback: on_check_ballot}(m_ballot.get().eid, m_ballot.get().sn);
     }
@@ -94,6 +116,7 @@ contract SaverVoter is IVoter {
     bytes public m_crs_vk;
     bytes public m_pk_eid;
     bytes public m_rt;
+    bytes m_vi;
     bytes public m_pk;
     bool public m_is_vote_accepted;
     optional(SharedStructs.Ballot) public m_ballot;

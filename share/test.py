@@ -29,10 +29,12 @@ admin_instance.call_method_signed('init_voting_session', {'eid': eid, 'pk_eid': 
 ts4.dispatch_messages()
 
 for inst, ballot in zip(voters_instances, voters_ballots):
-    inst.call_method_signed('vote', {'eid': eid, 'sn': ballot['sn'], 'proof': ballot['proof'], 'ct': ballot['ct'], 'proof_rerand': ballot['proof_rerand'], 'ct_rerand': ballot['ct_rerand']})
+    inst.call_method_signed('update_ballot', {'eid': eid, 'sn': ballot['sn'], 'proof': ballot['proof'], 'ct': ballot['ct'], 'proof_rerand': ballot['proof_rerand'], 'ct_rerand': ballot['ct_rerand']})
     msg_ping = ts4.peek_msg()
     assert eq(inst.address, msg_ping.src)
     assert eq(admin_instance.address, msg_ping.dst)
+    ts4.dispatch_messages()
+    inst.call_method_signed('commit_ballot', {})
     ts4.dispatch_messages()
     answer = inst.call_getter('m_is_vote_accepted')
     assert eq(True, answer)
@@ -41,13 +43,13 @@ for inst, ballot in zip(voters_instances, voters_ballots):
     answer = admin_instance.call_getter('m_recieved_ct')
     assert str(ballot['ct_rerand']).lower() == str(answer).lower()
 
-voters_instances[0].call_method_signed('vote', {'eid': eid, 'sn': voters_ballots[0]['sn'], 'proof': voters_ballots[0]['proof'], 'ct': voters_ballots[0]['ct'], 'proof_rerand': voters_ballots[0]['proof_rerand'], 'ct_rerand': voters_ballots[0]['ct_rerand']})
-ts4.dispatch_messages()
-answer = voters_instances[0].call_getter('m_is_vote_accepted')
-assert eq(False, answer)
-
-admin_instance.call_method_signed('get_voter_ct', {'voter_addr': voters_instances[0].address}, expect_ec = 108)
-ts4.dispatch_messages()
-answer = admin_instance.call_getter('m_recieved_ct')
-print(answer)
+# voters_instances[0].call_method_signed('vote', {'eid': eid, 'sn': voters_ballots[0]['sn'], 'proof': voters_ballots[0]['proof'], 'ct': voters_ballots[0]['ct'], 'proof_rerand': voters_ballots[0]['proof_rerand'], 'ct_rerand': voters_ballots[0]['ct_rerand']})
+# ts4.dispatch_messages()
+# answer = voters_instances[0].call_getter('m_is_vote_accepted')
+# assert eq(False, answer)
+#
+# admin_instance.call_method_signed('get_voter_ct', {'voter_addr': voters_instances[0].address}, expect_ec = 108)
+# ts4.dispatch_messages()
+# answer = admin_instance.call_getter('m_recieved_ct')
+# print(answer)
 

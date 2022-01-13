@@ -40,6 +40,11 @@ contract SaverAdmin is IAdmin {
         m_session_state = session_init_state;
     }
 
+    function uncommit_ballot() external checkSenderIsVoter responsible override returns (bool) {
+        m_session_state.voter_map_accepted.replace(msg.sender, false);
+        return true;
+    }
+
     function check_ballot(bytes eid, bytes sn) external checkSenderIsVoter responsible override returns (bool) {
         if (!SharedStructs.cmp_bytes(m_eid, eid)) {
             // incorrect session id
@@ -59,7 +64,7 @@ contract SaverAdmin is IAdmin {
         return (m_crs.vk, m_session_state.pk_eid, m_session_state.rt);
     }
 
-    function get_voter_ct(address voter_addr) public view checkOwnerAndAccept {
+    function get_voter_ct(address voter_addr) public checkOwnerAndAccept {
         require(m_session_state.voter_map_accepted.exists(voter_addr), 107);
         require(m_session_state.voter_map_accepted.at(voter_addr), 108);
         m_recieved_ct = null;

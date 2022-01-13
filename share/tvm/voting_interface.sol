@@ -7,6 +7,7 @@ interface IVoter {
 interface IAdmin {
     function get_session_data() external responsible returns (bytes, bytes, bytes);
     function check_ballot(bytes, bytes) external responsible returns (bool);
+    function uncommit_ballot() external responsible returns(bool);
 }
 
 library SharedStructs {

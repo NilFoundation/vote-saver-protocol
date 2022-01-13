@@ -1,12 +1,12 @@
 pragma ton-solidity >= 0.30.0;
 
 interface IVoter {
+    function get_ct() external responsible returns (optional(bytes));
 }
 
 interface IAdmin {
-    function send_ballot(bytes, SharedStructs.Ballot, SharedStructs.Ballot) external responsible returns (uint8);
-    // @return (sn, proof, ct)
-    function get_vote(bytes) external responsible returns (optional(SharedStructs.Ballot));
+    function get_session_data() external responsible returns (bytes, bytes, bytes);
+    function check_ballot(bytes, bytes) external responsible returns (bool);
 }
 
 library SharedStructs {
@@ -16,6 +16,7 @@ library SharedStructs {
     }
 
     struct Ballot {
+        bytes eid;
         bytes sn;
         bytes proof;
         bytes ct;
@@ -25,7 +26,7 @@ library SharedStructs {
         uint voters_number;
         bytes pk_eid;
         bytes vk_eid;
-        mapping(address => optional(Ballot)) voter_map_ballot;
+        mapping(address => bool) voter_map_accepted;
         bytes rt;
     }
 

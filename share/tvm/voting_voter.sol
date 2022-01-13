@@ -51,7 +51,7 @@ contract SaverVoter is IVoter {
     function commit_ballot() public view checkOwnerAndAccept {
         require(m_ballot.hasValue(), 207);
 
-        bytes verification_input;
+        bytes verification_input = hex"01";
         verification_input.append(m_ballot.get().proof);
         verification_input.append(m_crs_vk);
         verification_input.append(m_pk_eid);

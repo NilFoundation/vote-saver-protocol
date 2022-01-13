@@ -41,7 +41,7 @@ option(BUILD_SHARED_LIBS "Build shared library" TRUE)
 option(BUILD_TESTS "Build unit tests" TRUE)
 
 if(NOT Boost_FOUND)
-    cm_find_package(Boost REQUIRED COMPONENTS program_options system random)
+    cm_find_package(Boost REQUIRED COMPONENTS program_options system random unit_test_framework)
 endif()
 
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs"

@@ -40,13 +40,31 @@ contract SaverAdmin is IAdmin {
         m_session_state = session_init_state;
     }
 
-    function send_ballot(bytes eid, SharedStructs.Ballot ballot) public checkSenderIsVoter override {
-        // incorrect session id
-        require(SharedStructs.cmp_bytes(eid, m_eid), 107);
-        // already voted
-        require(!m_session_state.voter_map_ballot.at(msg.sender).hasValue(), 108);
-        // sn already sent
-        require(m_all_sn.add(ballot.sn, null), 109);
+    function send_ballot(bytes eid, SharedStructs.Ballot ballot, SharedStructs.Ballot ballot_rerand) public checkSenderIsVoter responsible override returns (uint8) {
+        if (!SharedStructs.cmp_bytes(eid, m_eid)) {
+            // incorrect session id
+            return 2;
+        }
+        if (m_session_state.voter_map_ballot.at(msg.sender).hasValue()) {
+            // already voted
+            return 3;
+        }
+        if (!SharedStructs.cmp_bytes(ballot.sn, ballot_rerand.sn)) {
+            // sn are not equal
+            return 4;
+        }
+        if (SharedStructs.cmp_bytes(ballot.ct, ballot_rerand.ct)) {
+            // ballot is not rerandomized
+            return 5;
+        }
+        if (SharedStructs.cmp_bytes(ballot.proof, ballot_rerand.proof)) {
+            // ballot is not rerandomized
+            return 6;
+        }
+        if (m_all_sn.exists(ballot.sn)) {
+            // sn already sent
+            return 7;
+        }
 
         // TODO: vergrth16
         bytes verification_input;
@@ -57,37 +75,43 @@ contract SaverAdmin is IAdmin {
         verification_input.append(m_eid);
         verification_input.append(ballot.sn);
         verification_input.append(m_session_state.rt);
-        require(tvm.vergrth16(verification_input), 110);
+//        if (!tvm.vergrth16(verification_input)) {
+//            return 8;
+//        }
 
-        // TODO: rerand
-
-        // unexpected error happened
-        require(m_session_state.voter_map_ballot.replace(msg.sender, ballot), 111);
+        if (!m_session_state.voter_map_ballot.replace(msg.sender, ballot_rerand)) {
+            // unexpected error happened
+            return 9;
+        }
+        if (!m_all_sn.add(ballot.sn, null)) {
+            // unexpected error happened
+            return 10;
+        }
+        return 0;
     }
 
-    function get_vote_internal(bytes eid, address sender) private view returns (bool, bytes, bytes, bytes) {
+    function get_vote_internal(bytes eid, address sender) private view returns (optional(SharedStructs.Ballot)) {
         if (!SharedStructs.cmp_bytes(eid, m_eid)) {
             // incorrect session id
-            return (false, "", "", "");
+            return null;
         }
         if (!m_session_state.voter_map_ballot.exists(sender)) {
             // not eligible voter
-            return (false, "", "", "");
+            return null;
         }
         if (!m_session_state.voter_map_ballot[sender].hasValue()) {
             // not voted yet
-            return (false, "", "", "");
+            return null;
         }
 
-        SharedStructs.Ballot ballot = m_session_state.voter_map_ballot[sender].get();
-        return (true, ballot.sn, ballot.proof, ballot.ct);
+        return m_session_state.voter_map_ballot[sender].get();
     }
 
-    function get_voter_vote(address sender) public view checkOwnerAndAccept returns (bool, bytes, bytes, bytes) {
-        return get_vote_internal(m_eid, sender);
+    function get_voter_vote(address voter_addr) public view checkOwnerAndAccept returns (optional(SharedStructs.Ballot)) {
+        return get_vote_internal(m_eid, voter_addr);
     }
 
-    function get_vote(bytes eid) public checkSenderIsVoter responsible override returns (bool, bytes, bytes, bytes) {
+    function get_vote(bytes eid) public checkSenderIsVoter responsible override returns (optional(SharedStructs.Ballot)) {
         return get_vote_internal(eid, msg.sender);
     }
 

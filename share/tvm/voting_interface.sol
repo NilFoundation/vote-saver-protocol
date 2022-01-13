@@ -4,9 +4,9 @@ interface IVoter {
 }
 
 interface IAdmin {
-    function send_ballot(bytes, SharedStructs.Ballot) external;
+    function send_ballot(bytes, SharedStructs.Ballot, SharedStructs.Ballot) external responsible returns (uint8);
     // @return (sn, proof, ct)
-    function get_vote(bytes) external responsible returns (bool, bytes, bytes, bytes);
+    function get_vote(bytes) external responsible returns (optional(SharedStructs.Ballot));
 }
 
 library SharedStructs {

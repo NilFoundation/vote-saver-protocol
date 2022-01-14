@@ -377,7 +377,7 @@ typename std::enable_if<std::is_unsigned<ValueType>::value, std::vector<std::arr
     generate_random_data(std::size_t leaf_number) {
     std::vector<std::array<ValueType, N>> v;
     for (std::size_t i = 0; i < leaf_number; ++i) {
-        std::array<ValueType, N> leaf;
+        std::array<ValueType, N> leaf {};
         std::generate(std::begin(leaf), std::end(leaf),
                       [&]() { return std::rand() % (std::numeric_limits<ValueType>::max() + 1); });
         v.emplace_back(leaf);
@@ -402,7 +402,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     std::vector<std::array<bool, public_key_bits>> public_keys;
     auto j = 0;
     for (const auto &sk : secret_keys) {
-        std::array<bool, enc_input_policy::hash_type::digest_bits> pk;
+        std::array<bool, enc_input_policy::hash_type::digest_bits> pk {};
         hash<enc_input_policy::merkle_hash_type>(sk, std::begin(pk));
         public_keys.emplace_back(pk);
         std::cout << "Public key of the Voter " << j++ << ": ";
@@ -488,6 +488,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         }
         std::cout << " }" << std::endl;
         std::vector<typename enc_input_policy::pairing_curve_type::scalar_field_type::value_type> m_field;
+        m_field.reserve(m.size());
         for (const auto m_i : m) {
             m_field.emplace_back(std::size_t(m_i));
         }
@@ -643,7 +644,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         ct_, decipher_rerand_sum_text.first, {std::get<2>(keypair), gg_keypair, decipher_rerand_sum_text.second});
     if (!dec_verification_ans)
         std::abort();
-    std::cout << "Verification succeded" << std::endl;
+    std::cout << "Verification succeeded" << std::endl;
 }
 
 int main(int argc, char *argv[]) {

@@ -11,8 +11,8 @@ This repository implements [SAVER](https://eprint.iacr.org/2019/1270) voting pro
 ### Building CLI
 
 Cli is used to generate R1CS, CRS, zk-SNARK proofs, ElGamal keys, execute encryption, decryption, proofs creation, (de)
-serialize generated data and other operations, required for the voting protocol execution. To build cli it is required to run 
-the following:
+serialize generated data and other operations, required for the voting protocol execution. To build cli it is required
+to run the following:
 
 ```shell
 git clone --recursive git@github.com:NilFoundation/ton-voting-protocol.git contest && cd contest
@@ -70,8 +70,13 @@ with open(verification_key0.bin, 'rb') as f:
     print(hexdata_str)
 ```
 
-First byte `01` when working with ballot blob file required for the correct work of the Ton VM, so it should not be
-missed.
+First byte `01` is required for the cluster's TVM to be able to work with ballot blob file.
+
+Why and what does it mean?
+
+To factor out the vote encryption out of the circuit, it was required to make Groth16 proof system to work well 
+with encrypted primary input. So the first byte was made to switch `VERGRTH16` instruction modes. `0x00` means it 
+would work with a usual primary input, `0x01` means it would work with ElGamal-encrypted primary input. 
 
 ### Building In-TVM Application
 

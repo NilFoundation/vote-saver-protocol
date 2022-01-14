@@ -7,7 +7,7 @@ contract SaverAdmin is IAdmin {
         require(tvm.pubkey() != 0, 101);
         require(msg.pubkey() == tvm.pubkey(), 102);
         tvm.accept();
-        m_voter_msg_accepted = 0;
+        reset_voter_msg_accepted();
     }
 
     modifier checkOwnerAndAccept {

@@ -114,9 +114,6 @@ contract SaverVoter is IVoter {
 
     function get_rt() public view returns (bytes) {
         tvm.accept();
-        if (!m_is_vote_accepted) {
-            return hex"";
-        }
         return m_ballot.vi[m_ballot.rt_begin:];
     }
     // ============================================

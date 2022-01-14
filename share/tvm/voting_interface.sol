@@ -18,9 +18,10 @@ library SharedStructs {
         bytes vi;
         uint32 proof_end;
         uint32 ct_begin;
+        uint32 ct_end;
         uint32 eid_begin;
         uint32 sn_begin;
-        uint32 sn_end;
+        uint32 rt_begin;
     }
 
     struct SessionState {

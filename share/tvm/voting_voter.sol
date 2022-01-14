@@ -46,10 +46,12 @@ contract SaverVoter is IVoter {
     // ============================================
     function reset_ballot() public checkOwnerAndAccept {
         m_ballot.vi = hex"";
+        m_ballot.proof_end = 0;
+        m_ballot.ct_begin = 0;
         m_ballot.ct_begin = 0;
         m_ballot.eid_begin = 0;
         m_ballot.sn_begin = 0;
-        m_ballot.sn_end = 0;
+        m_ballot.rt_begin = 0;
 
         reset_callback_status();
         IAdmin(m_current_admin).uncommit_ballot{callback: on_uncommit_ballot}();
@@ -66,30 +68,33 @@ contract SaverVoter is IVoter {
     // ============================================
     // Committing of the voter's ballot which make it possible to consider its vote
     // ============================================
-    function commit_ballot(uint32 proof_end, uint32 ct_begin, uint32 eid_begin, uint32 sn_begin, uint32 sn_end) public checkOwnerAndAccept {
-        require(m_ballot.vi.length > sn_end, 207);
-        require(sn_end > sn_begin, 208);
+    function commit_ballot(uint32 proof_end, uint32 ct_begin, uint32 ct_end, uint32 eid_begin, uint32 sn_begin, uint32 rt_begin) public checkOwnerAndAccept {
+        require(m_ballot.vi.length > rt_begin, 207);
+        require(rt_begin > sn_begin, 208);
         require(sn_begin > eid_begin, 209);
-        require(eid_begin > ct_begin, 210);
-        require(ct_begin > proof_end, 211);
+        require(eid_begin > ct_end, 210);
+        require(ct_end > ct_begin, 211);
+        require(ct_begin > proof_end, 212);
 
-        require(tvm.vergrth16(m_ballot.vi), 212);
+        require(tvm.vergrth16(m_ballot.vi), 213);
 
         m_ballot.proof_end = proof_end;
         m_ballot.ct_begin = ct_begin;
+        m_ballot.ct_begin = ct_end;
         m_ballot.eid_begin = eid_begin;
         m_ballot.sn_begin = sn_begin;
-        m_ballot.sn_end = sn_end;
+        m_ballot.rt_begin = rt_begin;
 
         reset_callback_status();
-        IAdmin(m_current_admin).check_ballot{callback: on_check_ballot, value: 200000000}(m_ballot.vi[eid_begin:sn_begin], m_ballot.vi[sn_begin:sn_end]);
+        IAdmin(m_current_admin).check_ballot{callback: on_check_ballot, value: 200000000}(m_ballot.vi[eid_begin:sn_begin], m_ballot.vi[sn_begin:rt_begin]);
     }
     // ============================================
 
     // ============================================
     // Getters available to all participants
     // ============================================
-    function get_pk() public view checkOwnerOrAdminAndAccept returns (bytes) {
+    function get_pk() public view returns (bytes) {
+        tvm.accept();
         return m_pk;
     }
 
@@ -97,7 +102,7 @@ contract SaverVoter is IVoter {
         if (!m_is_vote_accepted) {
             return hex"";
         }
-        return m_ballot.vi[m_ballot.sn_begin:m_ballot.sn_end];
+        return m_ballot.vi[m_ballot.sn_begin:m_ballot.rt_begin];
     }
 
     function get_proof() public view checkOwnerOrAdminAndAccept returns (bytes) {
@@ -111,7 +116,14 @@ contract SaverVoter is IVoter {
         if (!m_is_vote_accepted) {
             return hex"";
         }
-        return m_ballot.vi[m_ballot.ct_begin:m_ballot.eid_begin];
+        return m_ballot.vi[m_ballot.ct_begin:m_ballot.ct_end];
+    }
+
+    function get_rt() public view checkOwnerOrAdminAndAccept returns (bytes) {
+        if (!m_is_vote_accepted) {
+            return hex"";
+        }
+        return m_ballot.vi[m_ballot.rt_begin:];
     }
     // ============================================
 

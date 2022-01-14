@@ -398,10 +398,16 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     constexpr std::size_t public_key_bits = secret_key_bits;
     auto secret_keys = generate_random_data<bool, secret_key_bits>(participants_number);
     std::vector<std::array<bool, public_key_bits>> public_keys;
+    auto j = 0;
     for (const auto &sk : secret_keys) {
         std::array<bool, enc_input_policy::hash_type::digest_bits> pk;
         hash<enc_input_policy::merkle_hash_type>(sk, std::begin(pk));
         public_keys.emplace_back(pk);
+        std::cout << "Public key of the Voter " << j++ << ": ";
+        for (auto c : pk) {
+            std::cout << int(c);
+        }
+        std::cout << std::endl;
     }
     std::cout << "Participants key pairs generated." << std::endl;
 

@@ -10,7 +10,6 @@ contract SaverVoter is IVoter {
 
         m_pk = pk;
         m_current_admin = admin;
-        IAdmin(admin).get_session_data{callback: on_get_session_data}();
     }
 
     modifier checkOwnerAndAccept {
@@ -27,75 +26,49 @@ contract SaverVoter is IVoter {
 
     function update_admin(address new_admin) public checkOwnerAndAccept {
         m_current_admin = new_admin;
-        IAdmin(new_admin).get_session_data{callback: on_get_session_data}();
     }
 
     function reset_ballot() public checkOwnerAndAccept {
-        m_ballot = null;
+        m_ballot.vi = hex"";
+        m_ballot.ct_begin = 0;
+        m_ballot.eid_begin = 0;
+        m_ballot.sn_begin = 0;
+        m_ballot.sn_end = 0;
 
         IAdmin(m_current_admin).uncommit_ballot{callback: on_uncommit_ballot}();
     }
 
-    function update_ballot(bytes eid, bytes sn, bytes proof_rerand, bytes ct_rerand) public checkOwnerAndAccept {
-        if (!m_ballot.hasValue()) {
-            m_ballot = SharedStructs.Ballot("", "", "", "");
-        }
-        m_ballot.get().eid.append(eid);
-        m_ballot.get().sn.append(sn);
-        m_ballot.get().proof.append(proof_rerand);
-        m_ballot.get().ct.append(ct_rerand);
+    function update_ballot(bytes vi) public checkOwnerAndAccept {
+        m_ballot.vi.append(vi);
 
         IAdmin(m_current_admin).uncommit_ballot{callback: on_uncommit_ballot}();
     }
 
-    // TODO
-    function reset_session_date() public checkOwnerAndAccept {
-        m_crs_vk = hex"";
-        m_pk_eid = hex"";
-        m_rt = hex"";
-    }
+    function commit_ballot(uint32 ct_begin, uint32 eid_begin, uint32 sn_begin, uint32 sn_end) public checkOwnerAndAccept {
+        require(m_ballot.vi.length > sn_end, 207);
+        require(sn_end > sn_begin, 208);
+        require(sn_begin > eid_begin, 209);
+        require(eid_begin > ct_begin, 210);
 
-    // TODO
-    function update_session_data(bytes crs_vk, bytes pk_eid, bytes rt) public checkOwnerAndAccept {
-        m_crs_vk.append(crs_vk);
-        m_pk_eid.append(pk_eid);
-        m_rt.append(rt);
-    }
+        m_ballot.ct_begin = ct_begin;
+        m_ballot.eid_begin = eid_begin;
+        m_ballot.sn_begin = sn_begin;
+        m_ballot.sn_end = sn_end;
 
-    function commit_ballot() public view checkOwnerAndAccept {
-        require(m_ballot.hasValue(), 207);
+        require(tvm.vergrth16(m_ballot.vi), 211);
 
-        bytes verification_input = hex"01";
-        verification_input.append(m_ballot.get().proof);
-        verification_input.append(m_crs_vk);
-        verification_input.append(m_pk_eid);
-        verification_input.append(m_ballot.get().ct);
-        verification_input.append(m_ballot.get().eid);
-        verification_input.append(m_ballot.get().sn);
-        verification_input.append(m_rt);
-        require(tvm.vergrth16(verification_input), 208);
-
-        IAdmin(m_current_admin).check_ballot{callback: on_check_ballot}(m_ballot.get().eid, m_ballot.get().sn);
+        IAdmin(m_current_admin).check_ballot{callback: on_check_ballot}(m_ballot.vi[eid_begin:sn_begin], m_ballot.vi[sn_begin:sn_end]);
     }
 
     function get_vi_len() public view checkOwnerAndAccept returns (uint) {
-        return m_ballot.get().proof.length + m_crs_vk.length + m_pk_eid.length + m_ballot.get().ct.length + m_ballot.get().eid.length + m_ballot.get().sn.length + m_rt.length;
+        return m_ballot.vi.length;
     }
 
-    function get_ct() external checkAdminAndAccept responsible override returns (optional(bytes)) {
-        if (!m_ballot.hasValue()) {
-            return null;
-        }
+    function get_ct() public view checkAdminAndAccept returns (bytes) {
         if (!m_is_vote_accepted) {
-            return null;
+            return hex"";
         }
-        return m_ballot.get().ct;
-    }
-
-    function on_get_session_data(bytes crs_vk, bytes pk_eid, bytes rt) public checkAdminAndAccept {
-        m_crs_vk = crs_vk;
-        m_pk_eid = pk_eid;
-        m_rt = rt;
+        return m_ballot.vi[m_ballot.ct_begin:m_ballot.eid_begin];
     }
 
     function on_uncommit_ballot(bool status) public checkAdminAndAccept {
@@ -109,10 +82,7 @@ contract SaverVoter is IVoter {
     }
 
     address m_current_admin;
-    bytes public m_crs_vk; // TODO
-    bytes public m_pk_eid; // TODO
-    bytes public m_rt; // TODO
     bytes public m_pk;
     bool public m_is_vote_accepted;
-    optional(SharedStructs.Ballot) public m_ballot;
+    SharedStructs.Ballot public m_ballot;
 }

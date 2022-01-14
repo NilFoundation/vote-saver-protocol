@@ -84,30 +84,14 @@ contract SaverAdmin is IAdmin {
         return m_session_state.voter_map_accepted.at(msg.sender);
     }
 
-    function get_session_data() external checkSenderIsVoter responsible override returns (bytes, bytes, bytes) {
-        return (m_crs.vk, m_session_state.pk_eid, m_session_state.rt);
-    }
-
-    function get_voter_ct(address voter_addr) public checkOwnerAndAccept {
-        require(m_session_state.voter_map_accepted.exists(voter_addr), 107);
-        require(m_session_state.voter_map_accepted.at(voter_addr), 108);
-        m_recieved_ct = null;
-        IVoter(voter_addr).get_ct{callback: on_get_ct}();
-    }
-
     function get_voter_status(address voter_addr) public view checkOwnerAndAccept returns (bool) {
         require(m_session_state.voter_map_accepted.exists(voter_addr), 109);
         return m_session_state.voter_map_accepted.at(voter_addr);
     }
 
-    function on_get_ct(optional(bytes) ct) public checkSenderIsVoter {
-        m_recieved_ct = ct;
-    }
-
     bytes public m_eid;
     SharedStructs.CRS public m_crs;
     SharedStructs.SessionState public m_session_state;
-    optional(bytes) public m_recieved_ct;
     mapping(bytes => optional(bool))  m_all_eid;
     mapping(bytes => optional(bool))  m_all_sn;
 }

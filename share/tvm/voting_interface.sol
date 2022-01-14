@@ -1,11 +1,9 @@
 pragma ton-solidity >= 0.30.0;
 
 interface IVoter {
-    function get_ct() external responsible returns (optional(bytes));
 }
 
 interface IAdmin {
-    function get_session_data() external responsible returns (bytes, bytes, bytes);
     function check_ballot(bytes, bytes) external responsible returns (bool);
     function uncommit_ballot() external responsible returns(bool);
 }
@@ -17,10 +15,11 @@ library SharedStructs {
     }
 
     struct Ballot {
-        bytes eid;
-        bytes sn;
-        bytes proof;
-        bytes ct;
+        bytes vi;
+        uint32 ct_begin;
+        uint32 eid_begin;
+        uint32 sn_begin;
+        uint32 sn_end;
     }
 
     struct SessionState {

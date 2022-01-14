@@ -462,6 +462,8 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
               << std::endl;
     std::cout << "====================================================================" << std::endl << std::endl;
 
+    std::vector<typename enc_input_policy::encryption_scheme_type::cipher_type> ct_n;
+
     for (std::size_t i = 0; i < participants_number; ++i) {
 
         std::size_t proof_idx = i;
@@ -512,6 +514,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
             encrypt<enc_input_policy::encryption_scheme_type,
                     modes::verifiable_encryption<enc_input_policy::encryption_scheme_type>>(
                 m_field, {d(), std::get<0>(keypair), gg_keypair, bp.primary_input(), bp.auxiliary_input()});
+        ct_n.push_back(cipher_text);
         std::cout << "Vote generated." << std::endl;
 
         //    std::cout << "Marshalling started..." << std::endl;
@@ -581,6 +584,35 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         std::cout << "Decryption verification finished." << std::endl << std::endl;
         std::cout << "====================================================================" << std::endl << std::endl;
     }
+
+    std::cout << "Tally results." << std::endl;
+    auto ct_it = std::cbegin(ct_n);
+    auto ct_ = ct_it->first;
+    ct_it++;
+    while (ct_it != std::cend(ct_n)) {
+        for (std::size_t i = 0; i < std::size(ct_); ++i) {
+            ct_[i] = ct_[i] + ct_it->first[i];
+        }
+        ct_it++;
+    }
+
+    std::cout << "Deciphered results of voting:" << std::endl;
+    typename enc_input_policy::encryption_scheme_type::decipher_type decipher_rerand_sum_text =
+        decrypt<enc_input_policy::encryption_scheme_type,
+                modes::verifiable_encryption<enc_input_policy::encryption_scheme_type>>(
+            ct_, {std::get<1>(keypair), std::get<2>(keypair), gg_keypair});
+    if (decipher_rerand_sum_text.first.size() != msg_size) std::abort();
+    for (std::size_t i = 0; i < msg_size; ++i) {
+        std::cout << decipher_rerand_sum_text.first[i].data << ", ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Verification of the deciphered tally result." << std::endl;
+    bool dec_verification_ans = verify_decryption<enc_input_policy::encryption_scheme_type>(
+        ct_, decipher_rerand_sum_text.first,
+        {std::get<2>(keypair), gg_keypair, decipher_rerand_sum_text.second});
+    if (!dec_verification_ans) std::abort();
+    std::cout << "Verification succeded" << std::endl;
 }
 
 int main(int argc, char *argv[]) {

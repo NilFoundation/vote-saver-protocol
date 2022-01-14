@@ -57,18 +57,23 @@ contract SaverVoter is IVoter {
 
         require(tvm.vergrth16(m_ballot.vi), 211);
 
-        IAdmin(m_current_admin).check_ballot{callback: on_check_ballot}(m_ballot.vi[eid_begin:sn_begin], m_ballot.vi[sn_begin:sn_end]);
+        IAdmin(m_current_admin).check_ballot{callback: on_check_ballot, value: 200000000}(m_ballot.vi[eid_begin:sn_begin], m_ballot.vi[sn_begin:sn_end]);
     }
 
     function get_vi_len() public view checkOwnerAndAccept returns (uint) {
         return m_ballot.vi.length;
     }
 
-    function get_ct() public view checkAdminAndAccept returns (bytes) {
+    function get_ct() public view returns (bytes) {
+        tvm.accept();
         if (!m_is_vote_accepted) {
             return hex"";
         }
         return m_ballot.vi[m_ballot.ct_begin:m_ballot.eid_begin];
+    }
+
+    function is_vote_accepted() public view checkOwnerAndAccept returns (bool) {
+        return m_is_vote_accepted;
     }
 
     function on_uncommit_ballot(bool status) public checkAdminAndAccept {

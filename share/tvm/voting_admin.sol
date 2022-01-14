@@ -89,6 +89,25 @@ contract SaverAdmin is IAdmin {
         return m_session_state.voter_map_accepted.at(voter_addr);
     }
 
+    function reset_tally() public checkOwnerAndAccept {
+        m_session_state.m_sum = hex"";
+        m_session_state.dec_proof = hex"";
+    }
+
+    function update_tally(bytes m_sum, bytes dec_proof) public checkOwnerAndAccept {
+        m_session_state.m_sum.append(m_sum);
+        m_session_state.dec_proof.append(dec_proof);
+    }
+
+    function get_voters_addresses() public view returns (address[]) {
+        tvm.accept();
+        address[] ret;
+        for ((address addr,) : m_session_state.voter_map_accepted) {
+            ret.push(addr);
+        }
+        return ret;
+    }
+
     bytes public m_eid;
     SharedStructs.CRS public m_crs;
     SharedStructs.SessionState public m_session_state;

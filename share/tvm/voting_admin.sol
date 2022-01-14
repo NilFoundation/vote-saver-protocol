@@ -7,6 +7,7 @@ contract SaverAdmin is IAdmin {
         require(tvm.pubkey() != 0, 101);
         require(msg.pubkey() == tvm.pubkey(), 102);
         tvm.accept();
+        m_callback_status = 0;
     }
 
     modifier checkOwnerAndAccept {
@@ -65,11 +66,13 @@ contract SaverAdmin is IAdmin {
     }
 
     function uncommit_ballot() external checkSenderIsVoter responsible override returns (bool) {
+        m_callback_status = 1;
         m_session_state.voter_map_accepted.replace(msg.sender, false);
         return true;
     }
 
     function check_ballot(bytes eid, bytes sn) external checkSenderIsVoter responsible override returns (bool) {
+        m_callback_status = 2;
         if (!SharedStructs.cmp_bytes(m_eid, eid)) {
             // incorrect session id
             m_session_state.voter_map_accepted.replace(msg.sender, false);
@@ -108,9 +111,23 @@ contract SaverAdmin is IAdmin {
         return ret;
     }
 
+    function get_voters_statuses() public view returns (mapping(address => bool)) {
+        tvm.accept();
+        return m_session_state.voter_map_accepted;
+    }
+
+    function reset_callback_status() public checkOwnerAndAccept {
+        m_callback_status = 0;
+    }
+
+    function get_callback_status() public view checkOwnerAndAccept returns (uint) {
+        return m_callback_status;
+    }
+
     bytes public m_eid;
     SharedStructs.CRS public m_crs;
     SharedStructs.SessionState public m_session_state;
     mapping(bytes => optional(bool))  m_all_eid;
     mapping(bytes => optional(bool))  m_all_sn;
+    uint m_callback_status;
 }

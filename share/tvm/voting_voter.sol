@@ -10,6 +10,8 @@ contract SaverVoter is IVoter {
 
         m_pk = pk;
         m_current_admin = admin;
+        m_is_vote_accepted = false;
+        m_callback_status = 0;
     }
 
     modifier checkOwnerAndAccept {
@@ -26,6 +28,7 @@ contract SaverVoter is IVoter {
 
     function update_admin(address new_admin) public checkOwnerAndAccept {
         m_current_admin = new_admin;
+        m_is_vote_accepted = false;
     }
 
     function reset_ballot() public checkOwnerAndAccept {
@@ -35,12 +38,14 @@ contract SaverVoter is IVoter {
         m_ballot.sn_begin = 0;
         m_ballot.sn_end = 0;
 
+        reset_callback_status();
         IAdmin(m_current_admin).uncommit_ballot{callback: on_uncommit_ballot}();
     }
 
     function update_ballot(bytes vi) public checkOwnerAndAccept {
         m_ballot.vi.append(vi);
 
+        reset_callback_status();
         IAdmin(m_current_admin).uncommit_ballot{callback: on_uncommit_ballot}();
     }
 
@@ -57,6 +62,7 @@ contract SaverVoter is IVoter {
 
         require(tvm.vergrth16(m_ballot.vi), 211);
 
+        reset_callback_status();
         IAdmin(m_current_admin).check_ballot{callback: on_check_ballot, value: 200000000}(m_ballot.vi[eid_begin:sn_begin], m_ballot.vi[sn_begin:sn_end]);
     }
 
@@ -80,14 +86,25 @@ contract SaverVoter is IVoter {
         if (status) {
             m_is_vote_accepted = false;
         }
+        m_callback_status = 1;
     }
 
     function on_check_ballot(bool result) public checkAdminAndAccept {
         m_is_vote_accepted = result;
+        m_callback_status = 2;
+    }
+    
+    function reset_callback_status() public checkOwnerAndAccept {
+        m_callback_status = 0;
+    }
+    
+    function get_callback_status() public view checkOwnerAndAccept returns (uint) {
+        return m_callback_status;
     }
 
     address m_current_admin;
     bytes public m_pk;
     bool public m_is_vote_accepted;
     SharedStructs.Ballot public m_ballot;
+    uint m_callback_status;
 }

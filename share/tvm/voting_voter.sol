@@ -92,28 +92,24 @@ contract SaverVoter is IVoter {
         return m_pk;
     }
 
-    function get_sn() public view returns (bytes) {
-        tvm.accept();
-        if (!m_is_vote_accepted) {
-            return hex"";
-        }
-        return m_ballot.vi[m_ballot.sn_begin:m_ballot.rt_begin];
-    }
-
     function get_proof() public view returns (bytes) {
         tvm.accept();
-        if (!m_is_vote_accepted) {
-            return hex"";
-        }
         return m_ballot.vi[1:m_ballot.proof_end];
     }
 
     function get_ct() public view returns (bytes) {
         tvm.accept();
-        if (!m_is_vote_accepted) {
-            return hex"";
-        }
         return m_ballot.vi[m_ballot.ct_begin:m_ballot.ct_end];
+    }
+
+    function get_eid() public view returns (bytes) {
+        tvm.accept();
+        return m_ballot.vi[m_ballot.eid_begin:m_ballot.sn_begin];
+    }
+
+    function get_sn() public view returns (bytes) {
+        tvm.accept();
+        return m_ballot.vi[m_ballot.sn_begin:m_ballot.rt_begin];
     }
 
     function get_rt() public view returns (bytes) {

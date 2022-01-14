@@ -340,9 +340,11 @@ struct marshaling_verification_data_groth16_encrypted_input {
 
         if (vm.count("verifier-input-output")) {
             auto filename = vm["verifier-input-output"].as<std::string>() + std::to_string(proof_idx) + ".bin";
-            auto filename1 = vm["verifier-input-output"].as<std::string>() + std::string("_chunked") + std::to_string(proof_idx) + ".bin";
+            auto filename1 = vm["verifier-input-output"].as<std::string>() + std::string("_chunked") +
+                             std::to_string(proof_idx) + ".bin";
             write_obj(std::filesystem::path(filename), {proof_blob, vk_blob, pubkey_blob, ct_blob, pinput_blob});
-            write_obj(std::filesystem::path(filename1), {proof_blob, vk_blob, pubkey_blob, ct_blob, eid_blob, sn_blob, rt_blob});
+            write_obj(std::filesystem::path(filename1),
+                      {proof_blob, vk_blob, pubkey_blob, ct_blob, eid_blob, sn_blob, rt_blob});
         }
     }
 };
@@ -502,18 +504,25 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
 
         // BOOST_ASSERT(!bp.is_satisfied());
         path_var.generate_r1cs_witness(proof, true);
-        if (bp.is_satisfied()) std::abort();
+        if (bp.is_satisfied())
+            std::abort();
         address_bits_va.fill_with_bits_of_ulong(bp, path_var.address);
-        if (bp.is_satisfied()) std::abort();
-        if (address_bits_va.get_field_element_from_bits(bp) != path_var.address) std::abort();
+        if (bp.is_satisfied())
+            std::abort();
+        if (address_bits_va.get_field_element_from_bits(bp) != path_var.address)
+            std::abort();
         m_block.generate_r1cs_witness(m);
-        if (bp.is_satisfied()) std::abort();
+        if (bp.is_satisfied())
+            std::abort();
         eid_block.generate_r1cs_witness(eid);
-        if (bp.is_satisfied()) std::abort();
+        if (bp.is_satisfied())
+            std::abort();
         sk_block.generate_r1cs_witness(secret_keys[proof_idx]);
-        if (bp.is_satisfied()) std::abort();
+        if (bp.is_satisfied())
+            std::abort();
         vote_var.generate_r1cs_witness(tree.root(), sn);
-        if (!bp.is_satisfied()) std::abort();
+        if (!bp.is_satisfied())
+            std::abort();
 
         std::cout << "Voter " << proof_idx << " generates its vote consisting of proof and cipher text..." << std::endl;
         typename enc_input_policy::encryption_scheme_type::cipher_type cipher_text =
@@ -547,7 +556,8 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         std::size_t rt_offset = sn_offset + sn.size();
         std::size_t rt_offset_end = rt_offset + tree.root().size();
         typename enc_input_policy::proof_system::primary_input_type pinput = bp.primary_input();
-        if (std::cbegin(pinput) + rt_offset_end != std::cend(pinput)) std::abort();
+        if (std::cbegin(pinput) + rt_offset_end != std::cend(pinput))
+            std::abort();
         enc_input_policy::marshaling_data_type::write_data(
             proof_idx, vm, gg_keypair.second, std::get<0>(keypair), rerand_cipher_text.second,
             typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + eid_offset,
@@ -567,7 +577,8 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
             {std::get<0>(keypair), gg_keypair.second, rerand_cipher_text.second,
              typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + m.size(),
                                                                           std::cend(pinput)}});
-        if (!enc_verification_ans) std::abort();
+        if (!enc_verification_ans)
+            std::abort();
         std::cout << "Encryption verification of rerandomazed cipher text and proof finished." << std::endl;
 
         std::cout << "Administrator decrypts ballot from rerandomized cipher text and generates decryption proof..."
@@ -576,17 +587,30 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
             decrypt<enc_input_policy::encryption_scheme_type,
                     modes::verifiable_encryption<enc_input_policy::encryption_scheme_type>>(
                 rerand_cipher_text.first, {std::get<1>(keypair), std::get<2>(keypair), gg_keypair});
-        if (decipher_rerand_text.first.size() != m_field.size()) std::abort();
+        if (decipher_rerand_text.first.size() != m_field.size())
+            std::abort();
         for (std::size_t i = 0; i < m_field.size(); ++i) {
-            if (decipher_rerand_text.first[i] != m_field[i]) std::abort();
+            if (decipher_rerand_text.first[i] != m_field[i])
+                std::abort();
         }
-        std::cout << "Decryption finished." << std::endl;
+        std::cout << "Decryption finished, decryption proof generated." << std::endl;
+        using dec_proof_marshaling = nil::crypto3::marshalling::types::curve_element<
+            nil::marshalling::field_type<typename enc_input_policy::marshaling_data_type::endianness>,
+            typename enc_input_policy::curve_type::template g1_type<>>;
+        nil::marshalling::status_type status;
+        std::vector<std::uint8_t> cv =
+            nil::marshalling::unpack<typename enc_input_policy::marshaling_data_type::endianness>(
+                decipher_rerand_text.second, status);
+        enc_input_policy::marshaling_data_type::write_obj(std::string("decryption_proof.bin"), {
+                                                                                                   cv,
+                                                                                               });
 
         std::cout << "Any voter could verify decryption using decryption proof..." << std::endl;
         bool dec_verification_ans = verify_decryption<enc_input_policy::encryption_scheme_type>(
             rerand_cipher_text.first, decipher_rerand_text.first,
             {std::get<2>(keypair), gg_keypair, decipher_rerand_text.second});
-        if (!dec_verification_ans) std::abort();
+        if (!dec_verification_ans)
+            std::abort();
         std::cout << "Decryption verification finished." << std::endl << std::endl;
         std::cout << "====================================================================" << std::endl << std::endl;
     }
@@ -607,7 +631,8 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         decrypt<enc_input_policy::encryption_scheme_type,
                 modes::verifiable_encryption<enc_input_policy::encryption_scheme_type>>(
             ct_, {std::get<1>(keypair), std::get<2>(keypair), gg_keypair});
-    if (decipher_rerand_sum_text.first.size() != msg_size) std::abort();
+    if (decipher_rerand_sum_text.first.size() != msg_size)
+        std::abort();
     for (std::size_t i = 0; i < msg_size; ++i) {
         std::cout << decipher_rerand_sum_text.first[i].data << ", ";
     }
@@ -615,9 +640,9 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
 
     std::cout << "Verification of the deciphered tally result." << std::endl;
     bool dec_verification_ans = verify_decryption<enc_input_policy::encryption_scheme_type>(
-        ct_, decipher_rerand_sum_text.first,
-        {std::get<2>(keypair), gg_keypair, decipher_rerand_sum_text.second});
-    if (!dec_verification_ans) std::abort();
+        ct_, decipher_rerand_sum_text.first, {std::get<2>(keypair), gg_keypair, decipher_rerand_sum_text.second});
+    if (!dec_verification_ans)
+        std::abort();
     std::cout << "Verification succeded" << std::endl;
 }
 

@@ -146,7 +146,11 @@ contract SaverVoter is IVoter {
         }
         m_callback_status = result_status;
     }
-    
+
+    function set_pk(bytes pk) public checkOwnerAndAccept {
+        m_pk = pk;
+    }
+
     function reset_callback_status() public checkOwnerAndAccept {
         m_callback_status = -1;
     }

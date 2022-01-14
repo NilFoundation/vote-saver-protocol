@@ -1,0 +1,17 @@
+Config: /home/ilyas/projects/ton-voting-protocol/share/tvm/tonos-cli.conf.json
+Input arguments:
+     tvc: voting_voter.tvc
+      wc: None
+    keys: keys/voting_voter1.keys.json
+init_data: None
+is_update_tvc: None
+
+Seed phrase: "pen blood shy course victory sniff burden hybrid snap require sick club"
+Raw address: 0:a72953bd268862c86648bd299bc4e0566176035128a490d8551df52ece40ec84
+testnet:
+Non-bounceable address (for init): 0QCnKVO9JohiyGZIvSmbxOBWYXYDUSikkNhVHfUuzkDshHW8
+Bounceable address (for later access): kQCnKVO9JohiyGZIvSmbxOBWYXYDUSikkNhVHfUuzkDshCh5
+mainnet:
+Non-bounceable address (for init): UQCnKVO9JohiyGZIvSmbxOBWYXYDUSikkNhVHfUuzkDshM42
+Bounceable address (for later access): EQCnKVO9JohiyGZIvSmbxOBWYXYDUSikkNhVHfUuzkDshJPz
+Succeeded

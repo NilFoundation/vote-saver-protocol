@@ -1,0 +1,17 @@
+Config: /home/ilyas/projects/ton-voting-protocol/share/tvm/tonos-cli.conf.json
+Input arguments:
+     tvc: voting_voter.tvc
+      wc: None
+    keys: keys/voting_voter0.keys.json
+init_data: None
+is_update_tvc: None
+
+Seed phrase: "over blind wheel route exclude rapid bind price release submit marble absorb"
+Raw address: 0:38e18f490682cc199f97bec66c716508ae6379dcbb903f2976f89eed1b92a9a5
+testnet:
+Non-bounceable address (for init): 0QA44Y9JBoLMGZ-XvsZscWUIrmN53LuQPyl2-J7tG5KppcRR
+Bounceable address (for later access): kQA44Y9JBoLMGZ-XvsZscWUIrmN53LuQPyl2-J7tG5KppZmU
+mainnet:
+Non-bounceable address (for init): UQA44Y9JBoLMGZ-XvsZscWUIrmN53LuQPyl2-J7tG5KppX_b
+Bounceable address (for later access): EQA44Y9JBoLMGZ-XvsZscWUIrmN53LuQPyl2-J7tG5KppSIe
+Succeeded

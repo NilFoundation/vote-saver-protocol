@@ -1,0 +1,17 @@
+Config: /home/ilyas/projects/ton-voting-protocol/share/tvm/tonos-cli.conf.json
+Input arguments:
+     tvc: voting_voter.tvc
+      wc: None
+    keys: keys/voting_voter3.keys.json
+init_data: None
+is_update_tvc: None
+
+Seed phrase: "mirror forest rough range they confirm carbon mechanic monitor legal mansion throw"
+Raw address: 0:b8e25c3ebbcfc28af45938ba580ab3a82f426331e67a0237079fe72d314cbfe3
+testnet:
+Non-bounceable address (for init): 0QC44lw-u8_CivRZOLpYCrOoL0JjMeZ6AjcHn-ctMUy_43lz
+Bounceable address (for later access): kQC44lw-u8_CivRZOLpYCrOoL0JjMeZ6AjcHn-ctMUy_4yS2
+mainnet:
+Non-bounceable address (for init): UQC44lw-u8_CivRZOLpYCrOoL0JjMeZ6AjcHn-ctMUy_48L5
+Bounceable address (for later access): EQC44lw-u8_CivRZOLpYCrOoL0JjMeZ6AjcHn-ctMUy_4588
+Succeeded

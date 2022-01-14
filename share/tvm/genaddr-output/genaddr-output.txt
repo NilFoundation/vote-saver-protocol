@@ -1,0 +1,17 @@
+Config: /home/ilyas/projects/ton-voting-protocol/share/tvm/tonos-cli.conf.json
+Input arguments:
+     tvc: voting_admin.tvc
+      wc: None
+    keys: keys/voting_admin.keys.json
+init_data: None
+is_update_tvc: None
+
+Seed phrase: "acoustic echo club crash weekend address casino gadget pink input diet toast"
+Raw address: 0:4eb04909a3d8e451a9ff30ad7f9659a1d4fb04eb0e85f8fca58905aa181fd450
+testnet:
+Non-bounceable address (for init): 0QBOsEkJo9jkUan_MK1_llmh1PsE6w6F-PyliQWqGB_UUAqY
+Bounceable address (for later access): kQBOsEkJo9jkUan_MK1_llmh1PsE6w6F-PyliQWqGB_UUFdd
+mainnet:
+Non-bounceable address (for init): UQBOsEkJo9jkUan_MK1_llmh1PsE6w6F-PyliQWqGB_UULES
+Bounceable address (for later access): EQBOsEkJo9jkUan_MK1_llmh1PsE6w6F-PyliQWqGB_UUOzX
+Succeeded

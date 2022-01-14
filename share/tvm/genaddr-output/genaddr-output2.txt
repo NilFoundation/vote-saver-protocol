@@ -1,0 +1,17 @@
+Config: /home/ilyas/projects/ton-voting-protocol/share/tvm/tonos-cli.conf.json
+Input arguments:
+     tvc: voting_voter.tvc
+      wc: None
+    keys: keys/voting_voter2.keys.json
+init_data: None
+is_update_tvc: None
+
+Seed phrase: "alone verb girl dash awful local chief cannon brave treat garden say"
+Raw address: 0:8dc2d5ae85de8f1da509f7ed190409c06cb9d191ab2a23c59a74219b16db8f52
+testnet:
+Non-bounceable address (for init): 0QCNwtWuhd6PHaUJ9-0ZBAnAbLnRkasqI8WadCGbFtuPUkCC
+Bounceable address (for later access): kQCNwtWuhd6PHaUJ9-0ZBAnAbLnRkasqI8WadCGbFtuPUh1H
+mainnet:
+Non-bounceable address (for init): UQCNwtWuhd6PHaUJ9-0ZBAnAbLnRkasqI8WadCGbFtuPUvsI
+Bounceable address (for later access): EQCNwtWuhd6PHaUJ9-0ZBAnAbLnRkasqI8WadCGbFtuPUqbN
+Succeeded

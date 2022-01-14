@@ -60,11 +60,6 @@ smart contracts. In the file `cli/src/main.cpp` we demonstrate how to serialize 
 objects `r1cs_gg_ppzksnark<bls12<381>>::verification_key_type` and `r1cs_gg_ppzksnark<bls12<381>>::proof_type` and write
 that information to a file in the form of field elements that can be interpreted as byteblobs in Solidity.
 
-We won't go into detail here about the meaning of the values `A`, `B`, `C` etc in the proof data but check
-out [Vitalik's blog post](https://medium.com/@VitalikButerin/zk-snarks-under-the-hood-b33151a013f6) to learn more. The
-main thing to illustrate is that these values are elliptic curve points and hence will be represented by two elements of
-the underlying field.
-
 When running the executable `cli` from within the build directory two files will be created: `proof_data` and `vk_data`
 containing the corresponding data in the form of byteblobs.
 

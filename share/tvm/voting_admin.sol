@@ -7,7 +7,7 @@ contract SaverAdmin is IAdmin {
         require(tvm.pubkey() != 0, 101);
         require(msg.pubkey() == tvm.pubkey(), 102);
         tvm.accept();
-        m_callback_status = 0;
+        m_voter_msg_accepted = 0;
     }
 
     modifier checkOwnerAndAccept {
@@ -22,6 +22,15 @@ contract SaverAdmin is IAdmin {
         _;
     }
 
+    modifier checkOwnerOrSenderIsVoterAndAccept {
+        require(m_session_state.voter_map_accepted.exists(msg.sender) || msg.pubkey() == tvm.pubkey(), 105);
+        tvm.accept(); // TODO
+        _;
+    }
+
+    // ============================================
+    // Pre-initialization of the zk-SNARK keys
+    // ============================================
     function update_crs(bytes pk, bytes vk) public checkOwnerAndAccept {
         m_crs.pk.append(pk);
         m_crs.vk.append(vk);
@@ -31,7 +40,11 @@ contract SaverAdmin is IAdmin {
         m_crs.pk = hex"";
         m_crs.vk = hex"";
     }
+    // ============================================
 
+    // ============================================
+    // Admin has the possibility to reset history of all voting sessions
+    // ============================================
     function reset_context() public checkOwnerAndAccept {
         m_session_state.voters_number = 0;
         m_session_state.pk_eid = hex"";
@@ -47,11 +60,15 @@ contract SaverAdmin is IAdmin {
         m_all_eid = m2;
         m_all_sn = m3;
     }
+    // ============================================
 
+    // ============================================
+    // Initialization of the new voting session
+    // ============================================
     function init_voting_session(bytes eid, bytes pk_eid, bytes vk_eid, address[] voters_addresses, bytes rt) public checkOwnerAndAccept {
-        require(voters_addresses.length > 0, 105);
+        require(voters_addresses.length > 0, 106);
         // voting session with such eid was initialized already
-        require(m_all_eid.add(eid, null), 106);
+        require(m_all_eid.add(eid, null), 107);
 
         m_eid = eid;
         SharedStructs.SessionState session_init_state;
@@ -64,34 +81,45 @@ contract SaverAdmin is IAdmin {
         session_init_state.voters_number = voters_addresses.length;
         m_session_state = session_init_state;
     }
+    // ============================================
 
-    function uncommit_ballot() external checkSenderIsVoter responsible override returns (bool) {
-        m_callback_status = 1;
-        m_session_state.voter_map_accepted.replace(msg.sender, false);
-        return true;
-    }
-
-    function check_ballot(bytes eid, bytes sn) external checkSenderIsVoter responsible override returns (bool) {
-        m_callback_status = 2;
+    // ============================================
+    // Accepting and checking of the votes
+    // ============================================
+    function check_ballot(bytes eid, bytes sn) external checkSenderIsVoter responsible override returns (int32) {
+        m_voter_msg_accepted = 1;
+        int32 result_status = 0;
         if (!SharedStructs.cmp_bytes(m_eid, eid)) {
             // incorrect session id
             m_session_state.voter_map_accepted.replace(msg.sender, false);
+            result_status = 1;
         }
         else if (!m_all_sn.add(sn, null)) {
             // such sn already sent
             m_session_state.voter_map_accepted.replace(msg.sender, false);
+            result_status = 2;
         }
         else {
             m_session_state.voter_map_accepted.replace(msg.sender, true);
         }
-        return m_session_state.voter_map_accepted.at(msg.sender);
+        return result_status;
     }
+    // ============================================
 
-    function get_voter_status(address voter_addr) public view checkOwnerAndAccept returns (bool) {
-        require(m_session_state.voter_map_accepted.exists(voter_addr), 109);
-        return m_session_state.voter_map_accepted.at(voter_addr);
+    // ============================================
+    // Any change of the participant's vote will lead to the reset of its state
+    // and require another call of the check_ballot function
+    // ============================================
+    function uncommit_ballot() external checkSenderIsVoter responsible override returns (int32) {
+        m_voter_msg_accepted = 2;
+        m_session_state.voter_map_accepted.replace(msg.sender, false);
+        return 0;
     }
+    // ============================================
 
+    // ============================================
+    // Final phase of the voting
+    // ============================================
     function reset_tally() public checkOwnerAndAccept {
         m_session_state.m_sum = hex"";
         m_session_state.dec_proof = hex"";
@@ -101,9 +129,20 @@ contract SaverAdmin is IAdmin {
         m_session_state.m_sum.append(m_sum);
         m_session_state.dec_proof.append(dec_proof);
     }
+    // ============================================
 
-    function get_voters_addresses() public view returns (address[]) {
-        tvm.accept();
+    // ============================================
+    // Getters available to all participants
+    // ============================================
+    function get_crs_pk() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+        return m_crs.pk;
+    }
+
+    function get_crs_vk() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+        return m_crs.vk;
+    }
+
+    function get_voters_addresses() public view checkOwnerOrSenderIsVoterAndAccept returns (address[]) {
         address[] ret;
         for ((address addr,) : m_session_state.voter_map_accepted) {
             ret.push(addr);
@@ -111,17 +150,46 @@ contract SaverAdmin is IAdmin {
         return ret;
     }
 
-    function get_voters_statuses() public view returns (mapping(address => bool)) {
-        tvm.accept();
+    function get_pk_eid() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+        return m_session_state.pk_eid;
+    }
+
+    function get_vk_eid() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+        return m_session_state.vk_eid;
+    }
+
+    function get_eid() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+        return m_eid;
+    }
+
+    function get_rt() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+        return m_session_state.rt;
+    }
+
+    function get_m_sum() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+        return m_session_state.m_sum;
+    }
+
+    function get_dec_proof() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+        return m_session_state.dec_proof;
+    }
+    // ============================================
+
+    function get_voter_status(address voter_addr) public view checkOwnerAndAccept returns (bool) {
+        require(m_session_state.voter_map_accepted.exists(voter_addr), 108);
+        return m_session_state.voter_map_accepted.at(voter_addr);
+    }
+
+    function get_voters_statuses() public view checkOwnerAndAccept returns (mapping(address => bool)) {
         return m_session_state.voter_map_accepted;
     }
 
-    function reset_callback_status() public checkOwnerAndAccept {
-        m_callback_status = 0;
+    function reset_voter_msg_accepted() public checkOwnerAndAccept {
+        m_voter_msg_accepted = 0;
     }
 
-    function get_callback_status() public view checkOwnerAndAccept returns (uint) {
-        return m_callback_status;
+    function get_voter_msg_accepted() public view checkOwnerAndAccept returns (uint32) {
+        return m_voter_msg_accepted;
     }
 
     bytes public m_eid;
@@ -129,5 +197,5 @@ contract SaverAdmin is IAdmin {
     SharedStructs.SessionState public m_session_state;
     mapping(bytes => optional(bool))  m_all_eid;
     mapping(bytes => optional(bool))  m_all_sn;
-    uint m_callback_status;
+    uint32 m_voter_msg_accepted;
 }

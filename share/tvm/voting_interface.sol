@@ -4,8 +4,8 @@ interface IVoter {
 }
 
 interface IAdmin {
-    function check_ballot(bytes, bytes) external responsible returns (bool);
-    function uncommit_ballot() external responsible returns(bool);
+    function check_ballot(bytes, bytes) external responsible returns (int32);
+    function uncommit_ballot() external responsible returns(int32);
 }
 
 library SharedStructs {
@@ -16,6 +16,7 @@ library SharedStructs {
 
     struct Ballot {
         bytes vi;
+        uint32 proof_end;
         uint32 ct_begin;
         uint32 eid_begin;
         uint32 sn_begin;

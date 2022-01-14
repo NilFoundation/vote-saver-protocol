@@ -17,6 +17,7 @@ contract SaverAdmin is IAdmin {
 
     modifier checkSenderIsVoter {
         require(m_session_state.voter_map_accepted.exists(msg.sender), 104);
+        tvm.accept(); // TODO
         _;
     }
 

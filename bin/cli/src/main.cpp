@@ -311,11 +311,6 @@ struct marshaling_verification_data_groth16_encrypted_input {
             write_obj(std::filesystem::path(filename), {ct_blob});
         }
 
-        if (vm.count("verifier-input-output")) {
-            auto filename = vm["verifier-input-output"].as<std::string>() + std::to_string(proof_idx) + ".bin";
-            write_obj(std::filesystem::path(filename), {proof_blob, vk_blob, pubkey_blob, ct_blob, pinput_blob});
-        }
-
         auto eid_blob = serialize_obj<pinput_marshaling_type>(
             eid,
             std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
@@ -342,8 +337,13 @@ struct marshaling_verification_data_groth16_encrypted_input {
             auto filename = vm["rt-output"].as<std::string>() + std::to_string(proof_idx) + ".bin";
             write_obj(std::filesystem::path(filename), {rt_blob});
         }
-        std::cout << "pinput len: " <<  pinput_blob.size() << std::endl;
-        std::cout << "sum len: " << eid_blob.size() + sn_blob.size() + rt_blob.size() << std::endl;
+
+        if (vm.count("verifier-input-output")) {
+            auto filename = vm["verifier-input-output"].as<std::string>() + std::to_string(proof_idx) + ".bin";
+            auto filename1 = vm["verifier-input-output"].as<std::string>() + std::string("_chunked") + std::to_string(proof_idx) + ".bin";
+            write_obj(std::filesystem::path(filename), {proof_blob, vk_blob, pubkey_blob, ct_blob, pinput_blob});
+            write_obj(std::filesystem::path(filename1), {proof_blob, vk_blob, pubkey_blob, ct_blob, eid_blob, sn_blob, rt_blob});
+        }
     }
 };
 

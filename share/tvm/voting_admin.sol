@@ -22,12 +22,6 @@ contract SaverAdmin is IAdmin {
         _;
     }
 
-    modifier checkOwnerOrSenderIsVoterAndAccept {
-        require(m_session_state.voter_map_accepted.exists(msg.sender) || msg.pubkey() == tvm.pubkey(), 105);
-        tvm.accept(); // TODO
-        _;
-    }
-
     // ============================================
     // Pre-initialization of the zk-SNARK keys
     // ============================================
@@ -146,15 +140,18 @@ contract SaverAdmin is IAdmin {
     // ============================================
     // Getters available to all participants
     // ============================================
-    function get_crs_pk() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+    function get_crs_pk() public view returns (bytes) {
+        tvm.accept();
         return m_crs.pk;
     }
 
-    function get_crs_vk() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+    function get_crs_vk() public view returns (bytes) {
+        tvm.accept();
         return m_crs.vk;
     }
 
-    function get_voters_addresses() public view checkOwnerOrSenderIsVoterAndAccept returns (address[]) {
+    function get_voters_addresses() public view returns (address[]) {
+        tvm.accept();
         address[] ret;
         for ((address addr,) : m_session_state.voter_map_accepted) {
             ret.push(addr);
@@ -162,33 +159,40 @@ contract SaverAdmin is IAdmin {
         return ret;
     }
 
-    function get_pk_eid() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+    function get_pk_eid() public view returns (bytes) {
+        tvm.accept();
         return m_session_state.pk_eid;
     }
 
-    function get_vk_eid() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+    function get_vk_eid() public view returns (bytes) {
+        tvm.accept();
         return m_session_state.vk_eid;
     }
 
-    function get_eid() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+    function get_eid() public view returns (bytes) {
+        tvm.accept();
         return m_eid;
     }
 
-    function get_rt() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+    function get_rt() public view returns (bytes) {
+        tvm.accept();
         return m_session_state.rt;
     }
 
-    function get_ct_sum() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+    function get_ct_sum() public view returns (bytes) {
+        tvm.accept();
         require(m_is_tally_committed, 110);
         return m_session_state.ct_sum;
     }
 
-    function get_m_sum() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+    function get_m_sum() public view returns (bytes) {
+        tvm.accept();
         require(m_is_tally_committed, 110);
         return m_session_state.m_sum;
     }
 
-    function get_dec_proof() public view checkOwnerOrSenderIsVoterAndAccept returns (bytes) {
+    function get_dec_proof() public view returns (bytes) {
+        tvm.accept();
         require(m_is_tally_committed, 110);
         return m_session_state.dec_proof;
     }

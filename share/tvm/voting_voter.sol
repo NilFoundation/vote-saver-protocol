@@ -26,12 +26,6 @@ contract SaverVoter is IVoter {
         _;
     }
 
-    modifier checkOwnerOrAdminAndAccept {
-        require(msg.pubkey() == tvm.pubkey() || msg.sender == m_current_admin, 205);
-        tvm.accept();
-        _;
-    }
-
     // ============================================
     // Voter could switch between different admins holding different sessions
     // ============================================
@@ -98,28 +92,32 @@ contract SaverVoter is IVoter {
         return m_pk;
     }
 
-    function get_sn() public view checkOwnerOrAdminAndAccept returns (bytes) {
+    function get_sn() public view returns (bytes) {
+        tvm.accept();
         if (!m_is_vote_accepted) {
             return hex"";
         }
         return m_ballot.vi[m_ballot.sn_begin:m_ballot.rt_begin];
     }
 
-    function get_proof() public view checkOwnerOrAdminAndAccept returns (bytes) {
+    function get_proof() public view returns (bytes) {
+        tvm.accept();
         if (!m_is_vote_accepted) {
             return hex"";
         }
         return m_ballot.vi[1:m_ballot.proof_end];
     }
 
-    function get_ct() public view checkOwnerOrAdminAndAccept returns (bytes) {
+    function get_ct() public view returns (bytes) {
+        tvm.accept();
         if (!m_is_vote_accepted) {
             return hex"";
         }
         return m_ballot.vi[m_ballot.ct_begin:m_ballot.ct_end];
     }
 
-    function get_rt() public view checkOwnerOrAdminAndAccept returns (bytes) {
+    function get_rt() public view returns (bytes) {
+        tvm.accept();
         if (!m_is_vote_accepted) {
             return hex"";
         }

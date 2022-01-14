@@ -2,9 +2,17 @@
 
 This repository implements [SAVER](https://eprint.iacr.org/2019/1270) voting protocol for TON.
 
+## Requirements
+
+* Boost >= 1.76.
+
 ## Building
 
-Requirements: Boost >= 1.74.
+### Building CLI
+
+Cli is used to generate R1CS, CRS, zk-SNARK proofs, ElGamal keys, execute encryption, decryption, proofs creation, (de)
+serialize generated data and other operations, required for the voting protocol execution. To build cli it is required to run 
+the following:
 
 ```shell
 git clone --recursive git@github.com:NilFoundation/ton-voting-protocol.git contest && cd contest
@@ -18,19 +26,6 @@ make cli
 Let's consider voting session consisting of the session administrator and 4 voters.
 
 Consider that their accounts have enough balances to proceed with this protocol.
-
-### Building cli
-
-Cli is used to generate R1CS, CRS, zk-SNARK proofs, ElGamal keys, execute encryption, decryption, proofs creation, (de)
-serialize generated data and other operations, required for the voting protocol execution. To build cli run following
-command:
-
-```sh
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make cli
-```
 
 ### Generation
 

@@ -216,12 +216,20 @@ to the voter's in-TVM part). Also this voter will be marked as committed on the 
 successful call to the functions ```reset_ballot``` or ```update_ballot``` will decommit voter's vote on the voter and
 administrator sides, so ```commit_ballot``` should be called again.
 
-When all voters commit their ballots administrator downloads their encrypted ballot messages by calling to the
-```get_ct``` function of voters' in-TVM part, forms aggregated cipher text and uploads it by calling to the
-```update_tally```. After that administrator forms and uploads voting result (namely, decrypted aggregated cipher text)
-and decryption proof also using ```update_tally``` function. And finally administrator call ```commit_tally``` to make
-it possible for the voters to get this data by calling to the ```get_ct_sum```, ```get_m_sum```, ```get_dec_proof``` and
-then verify decryption using proof.
+After all voters commit their ballots then administrator downloads them by calling to the
+```get_ct``` function of voters' in-TVM part, forms aggregated cipher text and decrypts it to receive voting result (
+which in fact contains counted votes due to additively-homomorphic property of the protocol). Together with that
+decryption procedure decryption proof will be generated which should be used by every participant to verify decryption.
+To upload voting results and decryption proof administrator uses ```update_tally``` function. And finally administrator
+call ```commit_tally``` to make it possible for the voters to get this data by calling to the ```get_m_sum```
+, ```get_dec_proof```. After voters download it they also download encrypted ballots of other voters just like
+administrator using ```get_ct``` function (to get other voters' in-TVM addresses they should call
+to `get_voters_addresses` function of admin' in-TVM part). Then they aggregate downloaded ballots and using aggregated
+encrypted ballot and decryption proof they could verify voting results.
+
+Operations described in previous paragraph (except calls to in-TVM functions) are executes by the admin and voters
+locally (not in-TVM). To familiarize with its implementation see bin/cli/src/main.cpp where all protocol specified
+actions were modeled (to see results in readable format just run cli with the `--mode encrypted_input` flag).
 
 Administrator checks commit statuses of the voters calling to the ```get_voters_statuses```. Example call:
 

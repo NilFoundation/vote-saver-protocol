@@ -164,15 +164,15 @@ several calls of the ```update_crs``` function may be required. There is also a 
 begin uploading again.
 
 ```sh
-tonos-cli call 0:5c691b758a85d88035e9eb18b6713e4706972474b5e3e642213cfa499c1b7510 update_crs '{"pk":"<crs_proving_key>", "vk":"<crs_verification_key>"}' --abi voting_admin.abi.json --sign keys/voting_admin.keys.json
+tonos-cli call 0:4eb04909a3d8e451a9ff30ad7f9659a1d4fb04eb0e85f8fca58905aa181fd450 update_crs '{"pk":"<crs_proving_key>", "vk":"<crs_verification_key>"}' --abi voting_admin.abi.json --sign keys/voting_admin.keys.json
 
-tonos-cli call 0:5c691b758a85d88035e9eb18b6713e4706972474b5e3e642213cfa499c1b7510 reset_crs '{}' --abi voting_admin.abi.json --sign keys/voting_admin.keys.json
+tonos-cli call 0:4eb04909a3d8e451a9ff30ad7f9659a1d4fb04eb0e85f8fca58905aa181fd450 reset_crs '{}' --abi voting_admin.abi.json --sign keys/voting_admin.keys.json
 ```
 
 ### Admin initialize voting session:
 
 ```sh
-tonos-cli call 0:5c691b758a85d88035e9eb18b6713e4706972474b5e3e642213cfa499c1b7510 init_voting_session '{"eid":"<session id>","pk_eid":"<ElGamal public key>","vk_eid":"<ElGamal verification key>","voters_addresses":["0:df676530c241ff7e00796bf616aaf57a089df0521af0913c530c09af8b1852c3","0:cf8f119a7e4fd4f76fe499acd36e73745c497dba684755fed9361d86645ba50c","0:c2ce805ed58704653643f7e20e457d8ce4f47128017846cf8caadbd194ff6cac","0:21d8141bf87804445a4823c6c90596f6cceb82a748422b08cf51cc65e8c9437e"],"rt":"<root hash of the merkle tree constructed upon voters public keys>"}' --abi voting_admin.abi.json --sign keys/voting_admin.keys.json
+tonos-cli call 0:4eb04909a3d8e451a9ff30ad7f9659a1d4fb04eb0e85f8fca58905aa181fd450 init_voting_session '{"eid":"<session id>","pk_eid":"<ElGamal public key>","vk_eid":"<ElGamal verification key>","voters_addresses":["0:38e18f490682cc199f97bec66c716508ae6379dcbb903f2976f89eed1b92a9a5","0:a72953bd268862c86648bd299bc4e0566176035128a490d8551df52ece40ec84","0:8dc2d5ae85de8f1da509f7ed190409c06cb9d191ab2a23c59a74219b16db8f52","0:b8e25c3ebbcfc28af45938ba580ab3a82f426331e67a0237079fe72d314cbfe3"],"rt":"<root hash of the merkle tree constructed upon voters public keys>"}' --abi voting_admin.abi.json --sign keys/voting_admin.keys.json
 ```
 
 Each call to the function ```init_voting_session``` will initialize a new session completing the previous.
@@ -180,7 +180,7 @@ Each call to the function ```init_voting_session``` will initialize a new sessio
 ### Voters deployment:
 
 ```sh
-tonos-cli deploy --abi voting_voter.abi.json --sign keys/voting_voter0.keys.json voting_voter.tvc '{"pk":"010203", "admin":"0:5c691b758a85d88035e9eb18b6713e4706972474b5e3e642213cfa499c1b7510"}'
+tonos-cli deploy --abi voting_voter.abi.json --sign keys/voting_voter0.keys.json voting_voter.tvc '{"pk":"010203", "admin":"0:4eb04909a3d8e451a9ff30ad7f9659a1d4fb04eb0e85f8fca58905aa181fd450"}'
 # ...the same for other voters
 ```
 
@@ -190,10 +190,10 @@ session. Also they specify their public keys via ```pk``` (this is not deploymen
 
 ### Votes uploading and committing
 
-Voters upload their encrypted proved and rerandomized ballots:
+Voters upload their encrypted, proved and rerandomized ballots:
 
 ```sh
-tonos-cli call 0:df676530c241ff7e00796bf616aaf57a089df0521af0913c530c09af8b1852c3 update_ballot '{"vi":"<ballot blob which consists of: proof, crs vkey, ElGamal pubkey, encrypted ballot, session id, serial number and merkle tree root hash>"}' --abi voting_voter.abi.json --sign keys/voting_voter0.keys.json
+tonos-cli call 0:38e18f490682cc199f97bec66c716508ae6379dcbb903f2976f89eed1b92a9a5 update_ballot '{"vi":"<ballot blob which consists of: proof, crs vkey, ElGamal pubkey, encrypted ballot, session id, serial number and merkle tree root hash>"}' --abi voting_voter.abi.json --sign keys/voting_voter0.keys.json
 # ...the same for other voters
 ```
 
@@ -203,7 +203,7 @@ function ```reset_ballot``` allowing to begin uploading again.
 Voters commit their ballots:
 
 ```sh
-tonos-cli call 0:df676530c241ff7e00796bf616aaf57a089df0521af0913c530c09af8b1852c3 commit_ballot '{"proof_end":193,"ct_begin":35273,"eid_begin":35721,"sn_begin":37769,"sn_end":45929 }' --abi voting_voter.abi.json --sign keys/voting_voter0.keys.json
+tonos-cli call 0:38e18f490682cc199f97bec66c716508ae6379dcbb903f2976f89eed1b92a9a5 commit_ballot '{"proof_end":193,"ct_begin":35273,"eid_begin":35721,"sn_begin":37769,"sn_end":45929 }' --abi voting_voter.abi.json --sign keys/voting_voter0.keys.json
 ```
 
 During this step zk-SNARK verification of the input blob is processed. Input parameters index input blob, which should
@@ -211,7 +211,7 @@ have strict format, mentioned above, otherwise zk-SNARK verification will return
 in ```commit_ballot``` finish successfully, internal message to admin is sent, containing session id and serial number
 from the ballot blob. When all checks on the administrator side finish another internal message to the voter's callback
 function will be sent, containing statis of the administrator checks. If all checks are successful
-voter's ```m_is_vote_accepted``` flag is set to ```true``` (it could be get by the  ```is_vote_accepted``` function call
+voter's ```m_is_vote_accepted``` flag is set to ```true``` (it could be got by the  ```is_vote_accepted``` function call
 to the voter's in-TVM part). Also this voter will be marked as committed on the administrator side. Warning: every
 successful call to the functions ```reset_ballot``` or ```update_ballot``` will decommit voter's vote on the voter and
 administrator sides, so ```commit_ballot``` should be called again.
@@ -234,21 +234,20 @@ actions were modeled (to see results in readable format just run cli with the `-
 Administrator checks commit statuses of the voters calling to the ```get_voters_statuses```. Example call:
 
 ```sh
-tonos-cli call 0:5c691b758a85d88035e9eb18b6713e4706972474b5e3e642213cfa499c1b7510 get_voters_statuses '{}' --abi voting_admin.abi.json --sign keys/voting_admin.keys.json
+tonos-cli call 0:4eb04909a3d8e451a9ff30ad7f9659a1d4fb04eb0e85f8fca58905aa181fd450 get_voters_statuses '{}' --abi voting_admin.abi.json --sign keys/voting_admin.keys.json
 ```
 
 Example answer:
 
 ```sh
 #...
-MessageId: 72562068c2dd4f94b8fb38d8a484bec7ae2ca8917463a5da870eca8903aa7363
 Succeeded.
 Result: {
   "value0": {
-    "0:21d8141bf87804445a4823c6c90596f6cceb82a748422b08cf51cc65e8c9437e": false,
-    "0:c2ce805ed58704653643f7e20e457d8ce4f47128017846cf8caadbd194ff6cac": false,
-    "0:cf8f119a7e4fd4f76fe499acd36e73745c497dba684755fed9361d86645ba50c": false,
-    "0:df676530c241ff7e00796bf616aaf57a089df0521af0913c530c09af8b1852c3": true
+    "0:b8e25c3ebbcfc28af45938ba580ab3a82f426331e67a0237079fe72d314cbfe3": false,
+    "0:8dc2d5ae85de8f1da509f7ed190409c06cb9d191ab2a23c59a74219b16db8f52": false,
+    "0:a72953bd268862c86648bd299bc4e0566176035128a490d8551df52ece40ec84": false,
+    "0:38e18f490682cc199f97bec66c716508ae6379dcbb903f2976f89eed1b92a9a5": true
   }
 }
 ```

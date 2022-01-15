@@ -4,42 +4,45 @@ This repository implements [SAVER](https://eprint.iacr.org/2019/1270) voting pro
 
 ## Description
 
-Full and formal protocol description with formal security proofs is available within the [original SAVER voting 
-protocol paper](https://eprint.iacr.org/2019/1270).
+Full and formal protocol description with formal security proofs is available within
+the [original SAVER voting protocol paper](https://eprint.iacr.org/2019/1270).
 
 Basic workflow description is as follows.
 
-### Before election. 
-Our voting system let each user publish his own pk to the public, where pk is generated from user’s secret value. 
-For example, a simple way is to `let pk = H(sk)` for collision-resistant hash `H`. Without knowing `sk`, no one can 
-make a valid ballot.
+### Before election.
 
-### Initiating election. 
+Our voting system let each user publish his own pk to the public, where pk is generated from user’s secret value. For
+example, a simple way is to `let pk = H(sk)` for collision-resistant hash `H`. Without knowing `sk`, no one can make a
+valid ballot.
 
-First, to open an election, the administrator makes the `pklist` of the voters, which prescribes the selection of 
-eligible voters who participate in the election. Then the administrator generates a secret key `SK`, a public key `PK`, 
-and a verification key `VK` for the occasion, to publish `PK`, `VK` inside a fault-tolerant replication-enabled cluster 
-along with the `pklist` and its Merkle root `rt`. This set of `PK`, `VK` and `pklist`, `rt` defines each election; 
-a new election can be initiated with a different set of `PK′`, `VK′` and `pklist′`, `rt′`.
+### Initiating election.
+
+First, to open an election, the administrator makes the `pklist` of the voters, which prescribes the selection of
+eligible voters who participate in the election. Then the administrator generates a secret key `SK`, a public key `PK`,
+and a verification key `VK` for the occasion, to publish `PK`, `VK` inside a fault-tolerant replication-enabled cluster
+along with the `pklist` and its Merkle root `rt`. This set of `PK`, `VK` and `pklist`, `rt` defines each election; a new
+election can be initiated with a different set of `PK′`, `VK′` and `pklist′`, `rt′`.
 
 ### Casting votes
 
-After the election is initiated, voters who are selected in the list can cast a vote. Each voter must encrypt the vote 
-and prove the relation (i.e. membership test and message validity) at the same time, via generic verifiable encryption 
-from zk-SNARK. Similar to the membership test in Zerocash, the zk-SNARK circuit outputs a Merkle root `rt` to prove the 
-belonging within the `pklist`, and a serial number `sn` to prevent the duplication. Note that the `sn` does not reveal 
-the identity; it is only used for checking the duplication. As a ballot, a set of serial number `sn`, proof `π` and 
-ciphertext `CT` is sent to the cluster as a transaction. The cluster node checks if sn already exists in the 
-cluster's database (then abort). If `sn` is unique, it first verifies the proof, rerandomizes the vote from `π`, `CT` 
-to `π′`, `CT′`, and publishes the renewed vote `sn`, `π′`, `CT′` to the public cluster. The voter verifies `π′`, `CT′` 
-for his `sn` within the verifiable encryption, to be convinced that his vote is included. This satisfies the individual verifiability, but the voter can only check the existence of his vote; `π′`, `CT′` is unlinkable from `π`, `CT`, which 
+After the election is initiated, voters who are selected in the list can cast a vote. Each voter must encrypt the vote
+and prove the relation (i.e. membership test and message validity) at the same time, via generic verifiable encryption
+from zk-SNARK. Similar to the membership test in Zerocash, the zk-SNARK circuit outputs a Merkle root `rt` to prove the
+belonging within the `pklist`, and a serial number `sn` to prevent the duplication. Note that the `sn` does not reveal
+the identity; it is only used for checking the duplication. As a ballot, a set of serial number `sn`, proof `π` and
+ciphertext `CT` is sent to the cluster as a transaction. The cluster node checks if sn already exists in the cluster's
+database (then abort). If `sn` is unique, it first verifies the proof, rerandomizes the vote from `π`, `CT`
+to `π′`, `CT′`, and publishes the renewed vote `sn`, `π′`, `CT′` to the public cluster. The voter verifies `π′`, `CT′`
+for his `sn` within the verifiable encryption, to be convinced that his vote is included. This satisfies the individual
+verifiability, but the voter can only check the existence of his vote; `π′`, `CT′` is unlinkable from `π`, `CT`, which
 also achieves the receipt-freeness.
 
-### Tallying results. 
+### Tallying results.
+
 After all the votes from participants are posted within the public database's cluster, the administrator closes the  
-vote by declaring the tally result. Since the encryption scheme is additively-homomorphic, anyone can get the merged 
+vote by declaring the tally result. Since the encryption scheme is additively-homomorphic, anyone can get the merged
 ciphertext `CT` sum. The administrator is responsible for decrypting the `CT` sum with her own `SK`, and publishing the
-corresponding vote result `M_sum` along with the decryption proof `ν`. By verifying `M_sum`, `ν` with the verifiable 
+corresponding vote result `M_sum` along with the decryption proof `ν`. By verifying `M_sum`, `ν` with the verifiable
 decryption, anyone can be convinced that the result is tallied correctly (universal verifiability).
 
 ## Requirements
@@ -114,9 +117,9 @@ First byte `01` is required for the cluster's TVM to be able to work with ballot
 
 Why and what does it mean?
 
-To factor out the vote encryption out of the circuit, it was required to make Groth16 proof system to work well 
-with encrypted primary input. So the first byte was made to switch `VERGRTH16` instruction modes. `0x00` means it 
-would work with a usual primary input, `0x01` means it would work with ElGamal-encrypted primary input. 
+To factor out the vote encryption out of the circuit, it was required to make Groth16 proof system to work well with
+encrypted primary input. So the first byte was made to switch `VERGRTH16` instruction modes. `0x00` means it would work
+with a usual primary input, `0x01` means it would work with ElGamal-encrypted primary input.
 
 ### Building In-TVM Application
 
@@ -187,7 +190,7 @@ session. Also they specify their public keys via ```pk``` (this is not deploymen
 
 ### Votes uploading and committing
 
-Voters upload their encrypted proved and already !rerandomized! ballots:
+Voters upload their encrypted proved and rerandomized ballots:
 
 ```sh
 tonos-cli call 0:df676530c241ff7e00796bf616aaf57a089df0521af0913c530c09af8b1852c3 update_ballot '{"vi":"<ballot blob which consists of: proof, crs vkey, ElGamal pubkey, encrypted ballot, session id, serial number and merkle tree root hash>"}' --abi voting_voter.abi.json --sign keys/voting_voter0.keys.json

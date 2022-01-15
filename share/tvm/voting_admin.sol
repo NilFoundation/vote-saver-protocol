@@ -116,9 +116,28 @@ contract SaverAdmin is IAdmin {
     // ============================================
 
     // ============================================
+    // Potential problem: malicious administrator could begin tally phase before all voters committed their ballots.
+    // So voters could believe that everyone's votes were considered but in reality it's not the case.
+    // Permissibility of such possibilities depends on requirements specification for the application of the voting
+    // system in production (how much we trust administrator, for example).
+    // Possible solution:
+    // ============================================
+//    function is_tally_ready() private view returns(bool) {
+//        for ((, bool voter_status) : m_session_state.voter_map_accepted) {
+//            if (!voter_status) {
+//                return false;
+//            }
+//        }
+//        return true;
+//    }
+    // ============================================
+
+    // ============================================
     // Final phase of the voting
     // ============================================
     function reset_tally() public checkOwnerAndAccept {
+        // See description above
+//        require(is_tally_ready(), 108);
         m_is_tally_committed = false;
         m_session_state.ct_sum = hex"";
         m_session_state.m_sum = hex"";
@@ -126,6 +145,8 @@ contract SaverAdmin is IAdmin {
     }
 
     function update_tally(bytes ct_sum, bytes m_sum, bytes dec_proof) public checkOwnerAndAccept {
+        // See description above
+//        require(is_tally_ready(), 108);
         m_is_tally_committed = false;
         m_session_state.ct_sum.append(ct_sum);
         m_session_state.m_sum.append(m_sum);
@@ -133,6 +154,8 @@ contract SaverAdmin is IAdmin {
     }
 
     function commit_tally() public checkOwnerAndAccept {
+        // See description above
+//        require(is_tally_ready(), 108);
         m_is_tally_committed = true;
     }
     // ============================================

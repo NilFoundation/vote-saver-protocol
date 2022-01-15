@@ -36,9 +36,26 @@ contract SaverVoter is IVoter {
     // ============================================
 
     // ============================================
+    // Potential problem: if the system has the possibility of re-voting: after administrator finishes tally phase
+    // (upload decrypted voting results and decryption proof) malicious voter could update its ballot to correct one but
+    // different. Then according to protocol when voters begin to download encrypted ballots (call get_ct) of other
+    // voters, due to replaced ballot from the malicious voter decryption verification will be failed and voting results
+    // will be declined, so protocol execution violated.
+    // Permissibility of such possibility depends on requirements specification for the application of the voting
+    // system in production (in some cases re-voting could be needed).
+    // Possible solution:
+    // ============================================
+//    function could_commit() private view returns (bool) {
+//        return !m_is_vote_accepted;
+//    }
+    // ============================================
+
+    // ============================================
     // Loading of the voters' ballot
     // ============================================
     function reset_ballot() public checkOwnerAndAccept {
+        // See description above
+//        require(could_commit(), 205);
         m_ballot.vi = hex"";
         m_ballot.proof_end = 0;
         m_ballot.ct_begin = 0;
@@ -52,6 +69,8 @@ contract SaverVoter is IVoter {
     }
 
     function update_ballot(bytes vi) public checkOwnerAndAccept {
+        // See description above
+//        require(could_commit(), 205);
         m_ballot.vi.append(vi);
 
         reset_callback_status();

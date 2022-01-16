@@ -32,10 +32,11 @@ belonging within the `pklist`, and a serial number `sn` to prevent the duplicati
 the identity; it is only used for checking the duplication. As a ballot, a set of serial number `sn`, proof `π` and
 ciphertext `CT` is sent to the cluster as a transaction. The cluster node checks if sn already exists in the cluster's
 database (then abort). If `sn` is unique, it first verifies the proof, rerandomizes the vote from `π`, `CT`
-to `π′`, `CT′`, and publishes the renewed vote `sn`, `π′`, `CT′` to the public cluster. The voter verifies `π′`, `CT′`
-for his `sn` within the verifiable encryption, to be convinced that his vote is included. This satisfies the individual
-verifiability, but the voter can only check the existence of his vote; `π′`, `CT′` is unlinkable from `π`, `CT`, which
-also achieves the receipt-freeness.
+to `π′`, `CT′` (in case there is no submitted proof and `sn` uniqueness requirement), and publishes the renewed vote 
+`sn`, `π′`, `CT′` to the public cluster. The voter verifies `π′`, `CT′` for his `sn` within the verifiable 
+encryption, to be convinced that his vote is included. This satisfies the individual verifiability, but the voter 
+can only check the existence of his vote; `π′`, `CT′` is unlinkable from `π`, `CT`, which also achieves the 
+receipt-freeness.
 
 ### Tallying results.
 

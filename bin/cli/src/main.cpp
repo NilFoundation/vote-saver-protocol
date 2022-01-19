@@ -1,5 +1,6 @@
 //---------------------------------------------------------------------------//
 // Copyright (c) 2018-2021 Mikhail Komarov <nemo@nil.foundation>
+// Copyright (c) 2021 Ilias Khairullin <ilias@nil.foundation>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -247,15 +248,40 @@ void process_basic_mode(const boost::program_options::variables_map &vm) {
     }
 }
 
-struct enc_input_policy;
+struct marshaling_verification_data_groth16_encrypted_input;
 
-template<typename ProofSystem, typename PublicKey, typename SecretKey, typename VerificationKey, typename CipherText>
-struct marshaling_verification_data_groth16_encrypted_input {
-    using scalar_field_value_type = typename PublicKey::scheme_type::curve_type::scalar_field_type::value_type;
-    using proof_type = typename ProofSystem::proof_type;
-    using verification_key_type = typename ProofSystem::verification_key_type;
-    using proving_key_type = typename ProofSystem::proving_key_type;
-    using primary_input_type = typename ProofSystem::primary_input_type;
+struct enc_input_policy {
+    using pairing_curve_type = curves::bls12_381;
+    using curve_type = curves::jubjub;
+    using base_points_generator_hash_type = hashes::sha2<256>;
+    using hash_params = hashes::find_group_hash_default_params;
+    using hash_component = components::pedersen<curve_type, base_points_generator_hash_type, hash_params>;
+    using hash_type = typename hash_component::hash_type;
+    using merkle_hash_component = hash_component;
+    using merkle_hash_type = typename merkle_hash_component::hash_type;
+    using field_type = typename hash_component::field_type;
+    static constexpr std::size_t arity = 2;
+    static constexpr std::size_t tree_depth = 2;
+    using voting_component =
+        components::encrypted_input_voting<arity, hash_component, merkle_hash_component, field_type>;
+    using merkle_proof_component = typename voting_component::merkle_proof_component;
+    using encryption_scheme_type = elgamal_verifiable<pairing_curve_type>;
+    using proof_system = typename encryption_scheme_type::proof_system_type;
+    static constexpr std::size_t msg_size = 7;
+    static constexpr std::size_t secret_key_bits = hash_type::digest_bits;
+    static constexpr std::size_t public_key_bits = secret_key_bits;
+};
+
+struct marshaling_policy {
+    using scalar_field_value_type =
+        typename enc_input_policy::encryption_scheme_type::curve_type::scalar_field_type::value_type;
+    using proof_type = typename enc_input_policy::proof_system::proof_type;
+    using verification_key_type = typename enc_input_policy::proof_system::verification_key_type;
+    using proving_key_type = typename enc_input_policy::proof_system::proving_key_type;
+    using primary_input_type = typename enc_input_policy::proof_system::primary_input_type;
+    using elgamal_public_key_type = typename enc_input_policy::encryption_scheme_type::public_key_type;
+    using elgamal_private_key_type = typename enc_input_policy::encryption_scheme_type::private_key_type;
+    using elgamal_verification_key_type = typename enc_input_policy::encryption_scheme_type::verification_key_type;
 
     using endianness = nil::marshalling::option::big_endian;
     using r1cs_proof_marshaling_type =
@@ -268,15 +294,15 @@ struct marshaling_verification_data_groth16_encrypted_input {
                                                                         proving_key_type>;
     using public_key_marshaling_type =
         nil::crypto3::marshalling::types::elgamal_verifiable_public_key<nil::marshalling::field_type<endianness>,
-                                                                        PublicKey>;
+                                                                        elgamal_public_key_type>;
     using secret_key_marshaling_type =
         nil::crypto3::marshalling::types::elgamal_verifiable_private_key<nil::marshalling::field_type<endianness>,
-                                                                         SecretKey>;
+                                                                         elgamal_private_key_type>;
     using verification_key_marshaling_type =
         nil::crypto3::marshalling::types::elgamal_verifiable_verification_key<nil::marshalling::field_type<endianness>,
-                                                                              VerificationKey>;
+                                                                              elgamal_verification_key_type>;
     using ct_marshaling_type = nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_encrypted_primary_input<
-        nil::marshalling::field_type<endianness>, CipherText>;
+        nil::marshalling::field_type<endianness>, enc_input_policy::encryption_scheme_type::cipher_type::first_type>;
     using pinput_marshaling_type =
         nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_primary_input<nil::marshalling::field_type<endianness>,
                                                                           primary_input_type>;
@@ -315,6 +341,10 @@ struct marshaling_verification_data_groth16_encrypted_input {
 
     template<typename Path>
     static std::vector<std::uint8_t> read_obj(const Path &path) {
+        if (!std::filesystem::exists(path)) {
+            std::cerr << "File " << path << " doesn't exist, make sure you created it." << std::endl;
+            std::exit(1);
+        }
         std::ifstream in(path, std::ios_base::binary);
         std::stringstream buffer;
         buffer << in.rdbuf();
@@ -346,9 +376,10 @@ struct marshaling_verification_data_groth16_encrypted_input {
 
     static void write_initial_phase_admin_data(const boost::program_options::variables_map &vm,
                                                const proving_key_type &pk_crs, const verification_key_type &vk_crs,
-                                               const PublicKey &pk_eid, const SecretKey &sk_eid,
-                                               const VerificationKey &vk_eid, const primary_input_type &eid,
-                                               const primary_input_type &rt) {
+                                               const elgamal_public_key_type &pk_eid,
+                                               const elgamal_private_key_type &sk_eid,
+                                               const elgamal_verification_key_type &vk_eid,
+                                               const primary_input_type &eid, const primary_input_type &rt) {
         auto pk_crs_blob = serialize_obj<r1cs_proving_key_marshalling_type>(
             pk_crs,
             std::function(
@@ -369,14 +400,16 @@ struct marshaling_verification_data_groth16_encrypted_input {
         }
 
         auto pk_eid_blob = serialize_obj<public_key_marshaling_type>(
-            pk_eid, std::function(nil::crypto3::marshalling::types::fill_public_key<PublicKey, endianness>));
+            pk_eid,
+            std::function(nil::crypto3::marshalling::types::fill_public_key<elgamal_public_key_type, endianness>));
         if (vm.count("public-key-output")) {
             auto filename = vm["public-key-output"].as<std::string>() + ".bin";
             write_obj(std::filesystem::path(filename), {pk_eid_blob});
         }
 
         auto sk_eid_blob = serialize_obj<secret_key_marshaling_type>(
-            sk_eid, std::function(nil::crypto3::marshalling::types::fill_private_key<SecretKey, endianness>));
+            sk_eid,
+            std::function(nil::crypto3::marshalling::types::fill_private_key<elgamal_private_key_type, endianness>));
         if (vm.count("secret-key-output")) {
             auto filename = vm["secret-key-output"].as<std::string>() + ".bin";
             write_obj(std::filesystem::path(filename), {sk_eid_blob});
@@ -384,7 +417,8 @@ struct marshaling_verification_data_groth16_encrypted_input {
 
         auto vk_eid_blob = serialize_obj<verification_key_marshaling_type>(
             vk_eid,
-            std::function(nil::crypto3::marshalling::types::fill_verification_key<VerificationKey, endianness>));
+            std::function(
+                nil::crypto3::marshalling::types::fill_verification_key<elgamal_verification_key_type, endianness>));
         if (vm.count("verification-key-output")) {
             auto filename = vm["verification-key-output"].as<std::string>() + ".bin";
             write_obj(std::filesystem::path(filename), {vk_eid_blob});
@@ -410,9 +444,10 @@ struct marshaling_verification_data_groth16_encrypted_input {
     }
 
     static void write_data(std::size_t proof_idx, const boost::program_options::variables_map &vm,
-                           const verification_key_type &vk_crs, const PublicKey &pk_eid, const proof_type &proof,
-                           const primary_input_type &pinput, const CipherText &ct, const primary_input_type &eid,
-                           const primary_input_type &sn, const primary_input_type &rt) {
+                           const verification_key_type &vk_crs, const elgamal_public_key_type &pk_eid,
+                           const proof_type &proof, const primary_input_type &pinput,
+                           const enc_input_policy::encryption_scheme_type::cipher_type::first_type &ct,
+                           const primary_input_type &eid, const primary_input_type &sn, const primary_input_type &rt) {
         auto proof_blob = serialize_obj<r1cs_proof_marshaling_type>(
             proof,
             std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_proof<proof_type, endianness>));
@@ -432,9 +467,8 @@ struct marshaling_verification_data_groth16_encrypted_input {
 
         auto ct_blob = serialize_obj<ct_marshaling_type>(
             ct,
-            std::function(
-                nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_encrypted_primary_input<CipherText,
-                                                                                                 endianness>));
+            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_encrypted_primary_input<
+                          enc_input_policy::encryption_scheme_type::cipher_type::first_type, endianness>));
         if (vm.count("cipher-text-output")) {
             auto filename = vm["cipher-text-output"].as<std::string>() + std::to_string(proof_idx) + ".bin";
             write_obj(std::filesystem::path(filename), {ct_blob});
@@ -465,7 +499,8 @@ struct marshaling_verification_data_groth16_encrypted_input {
                 nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_verification_key<verification_key_type,
                                                                                           endianness>));
         auto pk_eid_blob = serialize_obj<public_key_marshaling_type>(
-            pk_eid, std::function(nil::crypto3::marshalling::types::fill_public_key<PublicKey, endianness>));
+            pk_eid,
+            std::function(nil::crypto3::marshalling::types::fill_public_key<elgamal_public_key_type, endianness>));
         if (vm.count("r1cs-verifier-input-output")) {
             auto filename = vm["r1cs-verifier-input-output"].as<std::string>() + std::to_string(proof_idx) + ".bin";
             auto filename1 = vm["r1cs-verifier-input-output"].as<std::string>() + std::string("_chunked") +
@@ -477,7 +512,7 @@ struct marshaling_verification_data_groth16_encrypted_input {
     }
 
     static void write_tally_phase_data(const boost::program_options::variables_map &vm,
-                                       const typename PublicKey::scheme_type::decipher_type &dec) {
+                                       const typename enc_input_policy::encryption_scheme_type::decipher_type &dec) {
         nil::marshalling::status_type status;
         std::vector<std::uint8_t> dec_proof_blob = nil::marshalling::pack<endianness>(dec.second, status);
         if (vm.count("decryption-proof-output")) {
@@ -486,7 +521,7 @@ struct marshaling_verification_data_groth16_encrypted_input {
                                     dec_proof_blob,
                                 });
 
-            typename PublicKey::scheme_type::decipher_type::second_type constructed_val =
+            typename enc_input_policy::encryption_scheme_type::decipher_type::second_type constructed_val =
                 nil::marshalling::pack<endianness>(dec_proof_blob, status);
             if (!(dec.second == constructed_val))
                 std::exit(10);
@@ -533,23 +568,26 @@ struct marshaling_verification_data_groth16_encrypted_input {
         return result;
     }
 
-    static PublicKey read_pk_eid(const boost::program_options::variables_map &vm) {
+    static elgamal_public_key_type read_pk_eid(const boost::program_options::variables_map &vm) {
         auto pk_eid_blob = read_obj(vm["public-key-output"].as<std::string>() + ".bin");
-        return deserialize_obj<public_key_marshaling_type, PublicKey>(
-            pk_eid_blob, std::function(nil::crypto3::marshalling::types::make_public_key<PublicKey, endianness>));
+        return deserialize_obj<public_key_marshaling_type, elgamal_public_key_type>(
+            pk_eid_blob,
+            std::function(nil::crypto3::marshalling::types::make_public_key<elgamal_public_key_type, endianness>));
     }
 
-    static VerificationKey read_vk_eid(const boost::program_options::variables_map &vm) {
+    static elgamal_verification_key_type read_vk_eid(const boost::program_options::variables_map &vm) {
         auto vk_eid_blob = read_obj(vm["verification-key-output"].as<std::string>() + ".bin");
-        return deserialize_obj<verification_key_marshaling_type, VerificationKey>(
+        return deserialize_obj<verification_key_marshaling_type, elgamal_verification_key_type>(
             vk_eid_blob,
-            std::function(nil::crypto3::marshalling::types::make_verification_key<VerificationKey, endianness>));
+            std::function(
+                nil::crypto3::marshalling::types::make_verification_key<elgamal_verification_key_type, endianness>));
     }
 
-    static SecretKey read_sk_eid(const boost::program_options::variables_map &vm) {
+    static elgamal_private_key_type read_sk_eid(const boost::program_options::variables_map &vm) {
         auto sk_eid_blob = read_obj(vm["secret-key-output"].as<std::string>() + ".bin");
-        return deserialize_obj<secret_key_marshaling_type, SecretKey>(
-            sk_eid_blob, std::function(nil::crypto3::marshalling::types::make_private_key<SecretKey, endianness>));
+        return deserialize_obj<secret_key_marshaling_type, elgamal_private_key_type>(
+            sk_eid_blob,
+            std::function(nil::crypto3::marshalling::types::make_private_key<elgamal_private_key_type, endianness>));
     }
 
     static verification_key_type read_vk_crs(const boost::program_options::variables_map &vm) {
@@ -574,47 +612,22 @@ struct marshaling_verification_data_groth16_encrypted_input {
             std::function(nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_proof<proof_type, endianness>));
     }
 
-    static typename PublicKey::scheme_type::cipher_type::first_type
+    static typename enc_input_policy::encryption_scheme_type::cipher_type::first_type
         read_ct(const boost::program_options::variables_map &vm, std::size_t proof_idx) {
-        return deserialize_obj<ct_marshaling_type, typename PublicKey::scheme_type::cipher_type::first_type>(
+        return deserialize_obj<ct_marshaling_type,
+                               typename enc_input_policy::encryption_scheme_type::cipher_type::first_type>(
             read_obj(vm["cipher-text-output"].as<std::string>() + std::to_string(proof_idx) + ".bin"),
             std::function(nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_encrypted_primary_input<
-                          typename PublicKey::scheme_type::cipher_type::first_type, endianness>));
+                          typename enc_input_policy::encryption_scheme_type::cipher_type::first_type, endianness>));
     }
 
-    static typename PublicKey::scheme_type::decipher_type::second_type
+    static typename enc_input_policy::encryption_scheme_type::decipher_type::second_type
         read_decryption_proof(const boost::program_options::variables_map &vm) {
         auto dec_proof_blob = read_obj(vm["decryption-proof-output"].as<std::string>() + ".bin");
         nil::marshalling::status_type status;
-        return static_cast<typename PublicKey::scheme_type::decipher_type::second_type>(
+        return static_cast<typename enc_input_policy::encryption_scheme_type::decipher_type::second_type>(
             nil::marshalling::pack<endianness>(dec_proof_blob, status));
     }
-};
-
-struct enc_input_policy {
-    using pairing_curve_type = curves::bls12_381;
-    using curve_type = curves::jubjub;
-    using base_points_generator_hash_type = hashes::sha2<256>;
-    using hash_params = hashes::find_group_hash_default_params;
-    using hash_component = components::pedersen<curve_type, base_points_generator_hash_type, hash_params>;
-    using hash_type = typename hash_component::hash_type;
-    using merkle_hash_component = hash_component;
-    using merkle_hash_type = typename merkle_hash_component::hash_type;
-    using field_type = typename hash_component::field_type;
-    static constexpr std::size_t arity = 2;
-    static constexpr std::size_t tree_depth = 2;
-    using voting_component =
-        components::encrypted_input_voting<arity, hash_component, merkle_hash_component, field_type>;
-    using merkle_proof_component = typename voting_component::merkle_proof_component;
-    using encryption_scheme_type = elgamal_verifiable<pairing_curve_type>;
-    using proof_system = typename encryption_scheme_type::proof_system_type;
-    using marshaling_data_type = marshaling_verification_data_groth16_encrypted_input<
-        proof_system, typename encryption_scheme_type::public_key_type,
-        typename encryption_scheme_type::private_key_type, typename encryption_scheme_type::verification_key_type,
-        typename encryption_scheme_type::cipher_type::first_type>;
-    static constexpr std::size_t msg_size = 7;
-    static constexpr std::size_t secret_key_bits = hash_type::digest_bits;
-    static constexpr std::size_t public_key_bits = secret_key_bits;
 };
 
 template<typename ValueType, std::size_t N>
@@ -666,8 +679,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         std::cout << std::endl;
         public_keys_field.push_back(pk_field);
         secret_keys_field.push_back(sk_field);
-        enc_input_policy::marshaling_data_type::write_initial_phase_voter_data(vm, public_keys_field.back(),
-                                                                               secret_keys_field.back(), j);
+        marshaling_policy::write_initial_phase_voter_data(vm, public_keys_field.back(), secret_keys_field.back(), j);
         ++j;
     }
     std::cout << "Participants key pairs generated." << std::endl;
@@ -735,9 +747,8 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     std::cout << "====================================================================" << std::endl << std::endl;
 
     std::cout << "Pre-init administrator marshalling started..." << std::endl;
-    enc_input_policy::marshaling_data_type::write_initial_phase_admin_data(vm, gg_keypair.first, gg_keypair.second,
-                                                                           std::get<0>(keypair), std::get<1>(keypair),
-                                                                           std::get<2>(keypair), eid_field, rt_field);
+    marshaling_policy::write_initial_phase_admin_data(vm, gg_keypair.first, gg_keypair.second, std::get<0>(keypair),
+                                                      std::get<1>(keypair), std::get<2>(keypair), eid_field, rt_field);
     std::cout << "Marshalling finished." << std::endl;
 
     std::vector<typename enc_input_policy::encryption_scheme_type::cipher_type> ct_n;
@@ -747,7 +758,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         std::size_t proof_idx = i;
         std::cout << "Participant with index " << proof_idx << " (vote sender) generates its merkle copath."
                   << std::endl;
-        containers::merkle_proof<enc_input_policy::merkle_hash_type, enc_input_policy::arity> proof(tree, proof_idx);
+        containers::merkle_proof<enc_input_policy::merkle_hash_type, enc_input_policy::arity> path(tree, proof_idx);
         auto tree_pk_leaf = tree[proof_idx];
 
         std::vector<bool> m(enc_input_policy::msg_size, false);
@@ -774,7 +785,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         std::cout << std::endl;
 
         // BOOST_ASSERT(!bp.is_satisfied());
-        path_var.generate_r1cs_witness(proof, true);
+        path_var.generate_r1cs_witness(path, true);
         if (bp.is_satisfied())
             std::exit(1);
         address_bits_va.fill_with_bits_of_ulong(bp, path_var.address);
@@ -827,17 +838,16 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         if (rt_field != typename enc_input_policy::proof_system::primary_input_type {
                             std::cbegin(pinput) + rt_offset, std::cbegin(pinput) + rt_offset_end})
             std::exit(1);
-        enc_input_policy::marshaling_data_type::write_data(
-            proof_idx, vm, gg_keypair.second, std::get<0>(keypair), rerand_cipher_text.second,
-            typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + eid_offset,
-                                                                         std::cend(pinput)},
-            rerand_cipher_text.first,
-            typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + eid_offset,
-                                                                         std::cbegin(pinput) + sn_offset},
-            typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + sn_offset,
-                                                                         std::cbegin(pinput) + rt_offset},
-            typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + rt_offset,
-                                                                         std::cbegin(pinput) + rt_offset_end});
+        marshaling_policy::write_data(proof_idx, vm, gg_keypair.second, std::get<0>(keypair), rerand_cipher_text.second,
+                                      typename enc_input_policy::proof_system::primary_input_type {
+                                          std::cbegin(pinput) + eid_offset, std::cend(pinput)},
+                                      rerand_cipher_text.first,
+                                      typename enc_input_policy::proof_system::primary_input_type {
+                                          std::cbegin(pinput) + eid_offset, std::cbegin(pinput) + sn_offset},
+                                      typename enc_input_policy::proof_system::primary_input_type {
+                                          std::cbegin(pinput) + sn_offset, std::cbegin(pinput) + rt_offset},
+                                      typename enc_input_policy::proof_system::primary_input_type {
+                                          std::cbegin(pinput) + rt_offset, std::cbegin(pinput) + rt_offset_end});
         std::cout << "Marshalling finished." << std::endl;
 
         std::cout << "Sender verifies rerandomized encrypted ballot and proof..." << std::endl;
@@ -898,7 +908,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     std::cout << std::endl;
 
     std::cout << "Tally phase marshalling started..." << std::endl;
-    enc_input_policy::marshaling_data_type::write_tally_phase_data(vm, decipher_rerand_sum_text);
+    marshaling_policy::write_tally_phase_data(vm, decipher_rerand_sum_text);
     std::cout << "Marshalling finished." << std::endl;
 
     std::cout << "Verification of the deciphered tally result." << std::endl;
@@ -931,7 +941,7 @@ void process_encrypted_input_mode_init_voter_phase(const boost::program_options:
         sk_field.emplace_back(int(c));
     }
     std::cout << std::endl;
-    enc_input_policy::marshaling_data_type::write_initial_phase_voter_data(vm, pk_field, sk_field, proof_idx);
+    marshaling_policy::write_initial_phase_voter_data(vm, pk_field, sk_field, proof_idx);
     std::cout << "Participants key pairs generated." << std::endl;
 }
 
@@ -949,7 +959,7 @@ void process_encrypted_input_mode_init_admin_phase(const boost::program_options:
     }
 
     std::cout << "Merkle tree generation upon participants public keys started..." << std::endl;
-    auto public_keys = enc_input_policy::marshaling_data_type::read_voters_public_keys(vm);
+    auto public_keys = marshaling_policy::read_voters_public_keys(vm);
     containers::merkle_tree<enc_input_policy::merkle_hash_type, enc_input_policy::arity> tree(public_keys);
     std::vector<scalar_field_value_type> rt_field;
     for (auto i : tree.root()) {
@@ -1012,9 +1022,8 @@ void process_encrypted_input_mode_init_admin_phase(const boost::program_options:
     std::cout << "====================================================================" << std::endl << std::endl;
 
     std::cout << "Pre-init administrator marshalling started..." << std::endl;
-    enc_input_policy::marshaling_data_type::write_initial_phase_admin_data(vm, gg_keypair.first, gg_keypair.second,
-                                                                           std::get<0>(keypair), std::get<1>(keypair),
-                                                                           std::get<2>(keypair), eid_field, rt_field);
+    marshaling_policy::write_initial_phase_admin_data(vm, gg_keypair.first, gg_keypair.second, std::get<0>(keypair),
+                                                      std::get<1>(keypair), std::get<2>(keypair), eid_field, rt_field);
     std::cout << "Marshalling finished." << std::endl;
 }
 
@@ -1038,16 +1047,16 @@ void process_encrypted_input_mode_vote_phase(const boost::program_options::varia
     std::cout << "Voter " << proof_idx << " generate encrypted ballot" << std::endl << std::endl;
 
     std::cout << "Participant with index " << proof_idx << " (vote sender) generates its merkle copath." << std::endl;
-    auto public_keys = enc_input_policy::marshaling_data_type::read_voters_public_keys(vm);
+    auto public_keys = marshaling_policy::read_voters_public_keys(vm);
     containers::merkle_tree<enc_input_policy::merkle_hash_type, enc_input_policy::arity> tree(public_keys);
     std::vector<scalar_field_value_type> rt_field;
     for (auto i : tree.root()) {
         rt_field.emplace_back(int(i));
     }
-    if (rt_field != enc_input_policy::marshaling_data_type::read_scalar_vector(vm["rt-output"].as<std::string>())) {
+    if (rt_field != marshaling_policy::read_scalar_vector(vm["rt-output"].as<std::string>())) {
         std::exit(2);
     }
-    containers::merkle_proof<enc_input_policy::merkle_hash_type, enc_input_policy::arity> proof(tree, proof_idx);
+    containers::merkle_proof<enc_input_policy::merkle_hash_type, enc_input_policy::arity> path(tree, proof_idx);
     auto tree_pk_leaf = tree[proof_idx];
 
     std::vector<bool> m(enc_input_policy::msg_size, false);
@@ -1063,9 +1072,9 @@ void process_encrypted_input_mode_vote_phase(const boost::program_options::varia
         m_field.emplace_back(std::size_t(m_i));
     }
 
-    auto eid = enc_input_policy::marshaling_data_type::read_bool_vector(vm["eid-output"].as<std::string>());
-    auto sk = enc_input_policy::marshaling_data_type::read_bool_vector(vm["voter-secret-key-output"].as<std::string>() +
-                                                                       std::to_string(proof_idx));
+    auto eid = marshaling_policy::read_bool_vector(vm["eid-output"].as<std::string>());
+    auto sk = marshaling_policy::read_bool_vector(vm["voter-secret-key-output"].as<std::string>() +
+                                                  std::to_string(proof_idx));
     std::vector<bool> eid_sk;
     std::copy(std::cbegin(eid), std::cend(eid), std::back_inserter(eid_sk));
     std::copy(std::cbegin(sk), std::cend(sk), std::back_inserter(eid_sk));
@@ -1097,7 +1106,7 @@ void process_encrypted_input_mode_vote_phase(const boost::program_options::varia
     bp.set_input_sizes(vote_var.get_input_size());
 
     // BOOST_ASSERT(!bp.is_satisfied());
-    path_var.generate_r1cs_witness(proof, true);
+    path_var.generate_r1cs_witness(path, true);
     if (bp.is_satisfied())
         std::exit(1);
     address_bits_va.fill_with_bits_of_ulong(bp, path_var.address);
@@ -1120,10 +1129,9 @@ void process_encrypted_input_mode_vote_phase(const boost::program_options::varia
 
     std::cout << "Voter " << proof_idx << " generates its vote consisting of proof and cipher text..." << std::endl;
     random::algebraic_random_device<typename enc_input_policy::pairing_curve_type::scalar_field_type> d;
-    auto pk_eid = enc_input_policy::marshaling_data_type::read_pk_eid(vm);
-    typename enc_input_policy::proof_system::keypair_type gg_keypair = {
-        enc_input_policy::marshaling_data_type::read_pk_crs(vm),
-        enc_input_policy::marshaling_data_type::read_vk_crs(vm)};
+    auto pk_eid = marshaling_policy::read_pk_eid(vm);
+    typename enc_input_policy::proof_system::keypair_type gg_keypair = {marshaling_policy::read_pk_crs(vm),
+                                                                        marshaling_policy::read_vk_crs(vm)};
     typename enc_input_policy::encryption_scheme_type::cipher_type cipher_text =
         encrypt<enc_input_policy::encryption_scheme_type,
                 modes::verifiable_encryption<enc_input_policy::encryption_scheme_type>>(
@@ -1146,17 +1154,16 @@ void process_encrypted_input_mode_vote_phase(const boost::program_options::varia
     std::size_t rt_offset = sn_offset + sn.size();
     std::size_t rt_offset_end = rt_offset + tree.root().size();
     typename enc_input_policy::proof_system::primary_input_type pinput = bp.primary_input();
-    enc_input_policy::marshaling_data_type::write_data(
-        proof_idx, vm, gg_keypair.second, pk_eid, rerand_cipher_text.second,
-        typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + eid_offset,
-                                                                     std::cend(pinput)},
-        rerand_cipher_text.first,
-        typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + eid_offset,
-                                                                     std::cbegin(pinput) + sn_offset},
-        typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + sn_offset,
-                                                                     std::cbegin(pinput) + rt_offset},
-        typename enc_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + rt_offset,
-                                                                     std::cbegin(pinput) + rt_offset_end});
+    marshaling_policy::write_data(proof_idx, vm, gg_keypair.second, pk_eid, rerand_cipher_text.second,
+                                  typename enc_input_policy::proof_system::primary_input_type {
+                                      std::cbegin(pinput) + eid_offset, std::cend(pinput)},
+                                  rerand_cipher_text.first,
+                                  typename enc_input_policy::proof_system::primary_input_type {
+                                      std::cbegin(pinput) + eid_offset, std::cbegin(pinput) + sn_offset},
+                                  typename enc_input_policy::proof_system::primary_input_type {
+                                      std::cbegin(pinput) + sn_offset, std::cbegin(pinput) + rt_offset},
+                                  typename enc_input_policy::proof_system::primary_input_type {
+                                      std::cbegin(pinput) + rt_offset, std::cbegin(pinput) + rt_offset_end});
     std::cout << "Marshalling finished." << std::endl;
 
     std::cout << "Sender verifies rerandomized encrypted ballot and proof..." << std::endl;
@@ -1188,9 +1195,9 @@ void process_encrypted_input_mode_tally_admin_phase(const boost::program_options
     }
     std::size_t participants_number = 1 << tree_depth;
 
-    auto ct_agg = enc_input_policy::marshaling_data_type::read_ct(vm, 0);
+    auto ct_agg = marshaling_policy::read_ct(vm, 0);
     for (auto proof_idx = 1; proof_idx < participants_number; proof_idx++) {
-        auto ct_i = enc_input_policy::marshaling_data_type::read_ct(vm, proof_idx);
+        auto ct_i = marshaling_policy::read_ct(vm, proof_idx);
         if (std::size(ct_agg) != std::size(ct_i)) {
             std::cerr << "Wrong size of the ct" << std::endl;
             std::exit(2);
@@ -1200,11 +1207,10 @@ void process_encrypted_input_mode_tally_admin_phase(const boost::program_options
         }
     }
 
-    auto sk_eid = enc_input_policy::marshaling_data_type::read_sk_eid(vm);
-    auto vk_eid = enc_input_policy::marshaling_data_type::read_vk_eid(vm);
-    typename enc_input_policy::proof_system::keypair_type gg_keypair = {
-        enc_input_policy::marshaling_data_type::read_pk_crs(vm),
-        enc_input_policy::marshaling_data_type::read_vk_crs(vm)};
+    auto sk_eid = marshaling_policy::read_sk_eid(vm);
+    auto vk_eid = marshaling_policy::read_vk_eid(vm);
+    typename enc_input_policy::proof_system::keypair_type gg_keypair = {marshaling_policy::read_pk_crs(vm),
+                                                                        marshaling_policy::read_vk_crs(vm)};
     std::cout << "Deciphered results of voting:" << std::endl;
     typename enc_input_policy::encryption_scheme_type::decipher_type decipher_rerand_sum_text =
         decrypt<enc_input_policy::encryption_scheme_type,
@@ -1221,7 +1227,7 @@ void process_encrypted_input_mode_tally_admin_phase(const boost::program_options
     std::cout << std::endl;
 
     std::cout << "Tally phase marshalling started..." << std::endl;
-    enc_input_policy::marshaling_data_type::write_tally_phase_data(vm, decipher_rerand_sum_text);
+    marshaling_policy::write_tally_phase_data(vm, decipher_rerand_sum_text);
     std::cout << "Marshalling finished." << std::endl;
 }
 
@@ -1240,9 +1246,9 @@ void process_encrypted_input_mode_tally_voter_phase(const boost::program_options
     }
     std::size_t participants_number = 1 << tree_depth;
 
-    auto ct_agg = enc_input_policy::marshaling_data_type::read_ct(vm, 0);
+    auto ct_agg = marshaling_policy::read_ct(vm, 0);
     for (auto proof_idx = 1; proof_idx < participants_number; proof_idx++) {
-        auto ct_i = enc_input_policy::marshaling_data_type::read_ct(vm, proof_idx);
+        auto ct_i = marshaling_policy::read_ct(vm, proof_idx);
         if (std::size(ct_agg) != std::size(ct_i)) {
             std::cerr << "Wrong size of the ct" << std::endl;
             std::exit(2);
@@ -1252,13 +1258,11 @@ void process_encrypted_input_mode_tally_voter_phase(const boost::program_options
         }
     }
 
-    auto vk_eid = enc_input_policy::marshaling_data_type::read_vk_eid(vm);
-    typename enc_input_policy::proof_system::keypair_type gg_keypair = {
-        enc_input_policy::marshaling_data_type::read_pk_crs(vm),
-        enc_input_policy::marshaling_data_type::read_vk_crs(vm)};
-    auto voting_result =
-        enc_input_policy::marshaling_data_type::read_scalar_vector(vm["voting-result-output"].as<std::string>());
-    auto dec_proof = enc_input_policy::marshaling_data_type::read_decryption_proof(vm);
+    auto vk_eid = marshaling_policy::read_vk_eid(vm);
+    typename enc_input_policy::proof_system::keypair_type gg_keypair = {marshaling_policy::read_pk_crs(vm),
+                                                                        marshaling_policy::read_vk_crs(vm)};
+    auto voting_result = marshaling_policy::read_scalar_vector(vm["voting-result-output"].as<std::string>());
+    auto dec_proof = marshaling_policy::read_decryption_proof(vm);
     std::cout << "Verification of the deciphered tally result." << std::endl;
     bool dec_verification_ans = verify_decryption<enc_input_policy::encryption_scheme_type>(
         ct_agg, voting_result, {vk_eid, gg_keypair, dec_proof});
@@ -1273,11 +1277,6 @@ void process_encrypted_input_mode_tally_voter_phase(const boost::program_options
 }
 
 int main(int argc, char *argv[]) {
-    using curve_type = algebra::curves::bls12<381>;
-    using scalar_field_type = typename curve_type::scalar_field_type;
-    using endianness = nil::marshalling::option::big_endian;
-    using proof_system_type = zk::snark::r1cs_gg_ppzksnark<curve_type>;
-
     std::srand(std::time(0));
 
     std::string mode;
@@ -1324,6 +1323,11 @@ int main(int argc, char *argv[]) {
         std::cout << desc << std::endl;
         return 0;
     } else if (vm["mode"].as<std::string>() == "basic") {
+        using curve_type = algebra::curves::bls12<381>;
+        using scalar_field_type = typename curve_type::scalar_field_type;
+        using endianness = nil::marshalling::option::big_endian;
+        using proof_system_type = zk::snark::r1cs_gg_ppzksnark<curve_type>;
+
         process_basic_mode<curve_type, endianness, proof_system_type>(vm);
     } else if (vm["mode"].as<std::string>() == "encrypted_input") {
         if (!vm.count("phase")) {

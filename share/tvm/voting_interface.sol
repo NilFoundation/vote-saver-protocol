@@ -28,6 +28,7 @@ library SharedStructs {
         uint voters_number;
         bytes pk_eid;
         bytes vk_eid;
+        address[] voters_addresses;
         mapping(address => bool) voter_map_accepted;
         bytes rt;
         bytes ct_sum;

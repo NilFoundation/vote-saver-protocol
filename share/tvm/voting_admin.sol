@@ -49,6 +49,8 @@ contract SaverAdmin is IAdmin {
         m_session_state.rt = hex"";
         mapping(address => bool) m1;
         m_session_state.voter_map_accepted = m1;
+        address[] empty_address_list;
+        m_session_state.voters_addresses = empty_address_list;
 
         m_eid = hex"";
 
@@ -72,6 +74,7 @@ contract SaverAdmin is IAdmin {
         session_init_state.pk_eid = pk_eid;
         session_init_state.vk_eid = vk_eid;
         session_init_state.rt = rt;
+        session_init_state.voters_addresses = voters_addresses;
         for (uint i = 0; i < voters_addresses.length; i++) {
             session_init_state.voter_map_accepted.add(voters_addresses[i], false);
         }
@@ -117,9 +120,10 @@ contract SaverAdmin is IAdmin {
 
     // ============================================
     // Potential problem: malicious administrator could begin tally phase before all voters committed their ballots.
-    // So voters could believe that everyone's votes were considered but in reality it's not the case.
+    // So voters would believe that everyone's votes were considered but in reality it's not the case.
     // Permissibility of such possibilities depends on requirements specification for the application of the voting
-    // system in production (how much we trust administrator, for example).
+    // system in production (how much we trust administrator, for example, or when the possibility to hold elections
+    // even if several voters could be offline is needed).
     // Possible solution:
     // ============================================
 //    function is_tally_ready() private view returns(bool) {
@@ -175,11 +179,7 @@ contract SaverAdmin is IAdmin {
 
     function get_voters_addresses() public view returns (address[]) {
         tvm.accept();
-        address[] ret;
-        for ((address addr,) : m_session_state.voter_map_accepted) {
-            ret.push(addr);
-        }
-        return ret;
+        return m_session_state.voters_addresses;
     }
 
     function get_pk_eid() public view returns (bytes) {

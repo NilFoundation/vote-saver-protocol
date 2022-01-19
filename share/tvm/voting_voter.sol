@@ -42,7 +42,7 @@ contract SaverVoter is IVoter {
     // voters, due to replaced ballot from the malicious voter decryption verification will be failed and voting results
     // will be declined, so protocol execution violated.
     // Permissibility of such possibility depends on requirements specification for the application of the voting
-    // system in production (in some cases re-voting could be needed).
+    // system in production (in some cases re-voting may be needed).
     // Possible solution:
     // ============================================
 //    function could_commit() private view returns (bool) {
@@ -82,6 +82,8 @@ contract SaverVoter is IVoter {
     // Committing of the voter's ballot which make it possible to consider its vote
     // ============================================
     function commit_ballot(uint32 proof_end, uint32 ct_begin, uint32 ct_end, uint32 eid_begin, uint32 sn_begin, uint32 rt_begin) public checkOwnerAndAccept {
+        // See description above
+//        require(could_commit(), 205);
         require(m_ballot.vi.length > rt_begin, 207);
         require(rt_begin > sn_begin, 208);
         require(sn_begin > eid_begin, 209);

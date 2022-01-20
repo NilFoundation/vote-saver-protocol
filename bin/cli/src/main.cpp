@@ -1269,7 +1269,7 @@ void process_encrypted_input_mode_tally_voter_phase(const boost::program_options
     if (!dec_verification_ans)
         std::exit(1);
     std::cout << "Verification succeeded" << std::endl;
-    std::cout << "Deciphered results of voting:" << std::endl;
+    std::cout << "Results of voting:" << std::endl;
     for (std::size_t i = 0; i < enc_input_policy::msg_size; ++i) {
         std::cout << voting_result[i].data << ", ";
     }

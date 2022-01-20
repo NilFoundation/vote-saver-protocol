@@ -95,7 +95,7 @@ contract SaverVoter is IVoter {
 
         m_ballot.proof_end = proof_end;
         m_ballot.ct_begin = ct_begin;
-        m_ballot.ct_begin = ct_end;
+        m_ballot.ct_end = ct_end;
         m_ballot.eid_begin = eid_begin;
         m_ballot.sn_begin = sn_begin;
         m_ballot.rt_begin = rt_begin;

@@ -713,7 +713,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         bp, enc_input_policy::merkle_hash_component::digest_bits);
     components::blueprint_variable_vector<enc_input_policy::field_type> address_bits_va;
     address_bits_va.allocate(bp, enc_input_policy::tree_depth);
-    enc_input_policy::merkle_proof_component path_var(bp, enc_input_policy::tree_depth);
+    enc_input_policy::merkle_proof_component path_var(bp, tree_depth);
     components::block_variable<enc_input_policy::field_type> sk_block(bp, enc_input_policy::secret_key_bits);
     enc_input_policy::voting_component vote_var(bp, m_block, eid_block, sn_digest, root_digest, address_bits_va,
                                                 path_var, sk_block,

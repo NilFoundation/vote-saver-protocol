@@ -261,7 +261,6 @@ struct enc_input_policy {
     using merkle_hash_type = typename merkle_hash_component::hash_type;
     using field_type = typename hash_component::field_type;
     static constexpr std::size_t arity = 2;
-    static constexpr std::size_t tree_depth = 2;
     using voting_component =
         components::encrypted_input_voting<arity, hash_component, merkle_hash_component, field_type>;
     using merkle_proof_component = typename voting_component::merkle_proof_component;
@@ -712,7 +711,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     components::digest_variable<enc_input_policy::field_type> root_digest(
         bp, enc_input_policy::merkle_hash_component::digest_bits);
     components::blueprint_variable_vector<enc_input_policy::field_type> address_bits_va;
-    address_bits_va.allocate(bp, enc_input_policy::tree_depth);
+    address_bits_va.allocate(bp, tree_depth);
     enc_input_policy::merkle_proof_component path_var(bp, tree_depth);
     components::block_variable<enc_input_policy::field_type> sk_block(bp, enc_input_policy::secret_key_bits);
     enc_input_policy::voting_component vote_var(bp, m_block, eid_block, sn_digest, root_digest, address_bits_va,
@@ -987,8 +986,8 @@ void process_encrypted_input_mode_init_admin_phase(const boost::program_options:
     components::digest_variable<enc_input_policy::field_type> root_digest(
         bp, enc_input_policy::merkle_hash_component::digest_bits);
     components::blueprint_variable_vector<enc_input_policy::field_type> address_bits_va;
-    address_bits_va.allocate(bp, enc_input_policy::tree_depth);
-    enc_input_policy::merkle_proof_component path_var(bp, enc_input_policy::tree_depth);
+    address_bits_va.allocate(bp, tree_depth);
+    enc_input_policy::merkle_proof_component path_var(bp, tree_depth);
     components::block_variable<enc_input_policy::field_type> sk_block(bp, enc_input_policy::secret_key_bits);
     enc_input_policy::voting_component vote_var(bp, m_block, eid_block, sn_digest, root_digest, address_bits_va,
                                                 path_var, sk_block,
@@ -1093,8 +1092,8 @@ void process_encrypted_input_mode_vote_phase(const boost::program_options::varia
     components::digest_variable<enc_input_policy::field_type> root_digest(
         bp, enc_input_policy::merkle_hash_component::digest_bits);
     components::blueprint_variable_vector<enc_input_policy::field_type> address_bits_va;
-    address_bits_va.allocate(bp, enc_input_policy::tree_depth);
-    enc_input_policy::merkle_proof_component path_var(bp, enc_input_policy::tree_depth);
+    address_bits_va.allocate(bp, tree_depth);
+    enc_input_policy::merkle_proof_component path_var(bp, tree_depth);
     components::block_variable<enc_input_policy::field_type> sk_block(bp, enc_input_policy::secret_key_bits);
     enc_input_policy::voting_component vote_var(bp, m_block, eid_block, sn_digest, root_digest, address_bits_va,
                                                 path_var, sk_block,
@@ -1280,7 +1279,7 @@ int main(int argc, char *argv[]) {
     std::srand(std::time(0));
 
     std::string mode;
-    std::size_t tree_depth;
+    std::size_t tree_depth = 0;
     boost::program_options::options_description desc(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
         "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator.");
@@ -1307,7 +1306,7 @@ int main(int argc, char *argv[]) {
     ("eid-output,eido", boost::program_options::value<std::string>()->default_value("eid"), "Session id output path (for encrypted_input mode only).")
     ("sn-output,sno", boost::program_options::value<std::string>()->default_value("sn"), "Serial number output path (for encrypted_input mode only).")
     ("rt-output,rto", boost::program_options::value<std::string>()->default_value("rt"), "Session id output path (for encrypted_input mode only).")
-    ("tree-depth,td", boost::program_options::value<std::size_t>()->default_value(enc_input_policy::tree_depth), "Depth of Merkle tree built upon participants' public keys (for encrypted_input mode only).");
+    ("tree-depth,td", boost::program_options::value<std::size_t>()->default_value(tree_depth), "Depth of Merkle tree built upon participants' public keys (for encrypted_input mode only).");
     // clang-format on
 
     boost::program_options::variables_map vm;

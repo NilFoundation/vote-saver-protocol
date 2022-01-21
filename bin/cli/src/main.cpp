@@ -538,7 +538,7 @@ struct marshaling_policy {
         }
     }
 
-    static std::vector<scalar_field_value_type> read_scalar_vector(std::string file_prefix) {
+    static std::vector<scalar_field_value_type> read_scalar_vector(const std::string &file_prefix) {
         auto filename = file_prefix + ".bin";
         return deserialize_obj<pinput_marshaling_type, std::vector<scalar_field_value_type>>(
             read_obj(filename),
@@ -546,7 +546,7 @@ struct marshaling_policy {
                           std::vector<scalar_field_value_type>, endianness>));
     }
 
-    static std::vector<bool> read_bool_vector(std::string file_prefix) {
+    static std::vector<bool> read_bool_vector(const std::string &file_prefix) {
         std::vector<bool> result;
         for (const auto &i : read_scalar_vector(file_prefix)) {
             result.emplace_back(i.data);

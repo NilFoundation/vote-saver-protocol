@@ -1,6 +1,6 @@
 # Vote Saver Protocol.
 
-This repository implements [SAVER](https://eprint.iacr.org/2019/1270) voting protocol.
+This repository implements SAVER (https://eprint.iacr.org/2019/1270) voting protocol.
 Virtualized part is implemented in TVM-specific Solidity dialect.
 
 ## Description

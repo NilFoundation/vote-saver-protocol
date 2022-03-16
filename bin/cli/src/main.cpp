@@ -99,37 +99,6 @@ typename std::enable_if<std::is_same<Coordinates, curves::coordinates::projectiv
     os << "] )" << std::endl;
 }
 
-template<typename FieldType>
-components::blueprint<FieldType> test_disjunction_component(size_t w) {
-
-    using field_type = FieldType;
-
-    std::size_t n = std::log2(w) + ((w > (1ul << std::size_t(std::log2(w)))) ? 1 : 0);
-
-    components::blueprint<field_type> bp;
-    components::blueprint_variable<field_type> output;
-    output.allocate(bp);
-
-    bp.set_input_sizes(1);
-
-    components::blueprint_variable_vector<field_type> inputs;
-    inputs.allocate(bp, n);
-
-    components::disjunction<field_type> d(bp, inputs, output);
-    d.generate_r1cs_constraints();
-
-    for (std::size_t j = 0; j < n; ++j) {
-        bp.val(inputs[j]) = typename field_type::value_type((w & (1ul << j)) ? 1 : 0);
-    }
-
-    d.generate_r1cs_witness();
-
-    BOOST_ASSERT(bp.val(output) == (w ? field_type::value_type::one() : field_type::value_type::zero()));
-    BOOST_ASSERT(bp.is_satisfied());
-
-    return bp;
-}
-
 template<typename Curve, typename Endianness, typename ProofSystem>
 void process_basic_mode(const boost::program_options::variables_map &vm) {
     using curve_type = Curve;
@@ -672,6 +641,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
             std::cout << int(c);
             pk_field.emplace_back(int(c));
         }
+        sk_field.reserve(sk.size());
         for (auto c : sk) {
             sk_field.emplace_back(int(c));
         }

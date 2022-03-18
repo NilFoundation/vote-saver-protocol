@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------//
-// Copyright (c) 2018-2021 Mikhail Komarov <nemo@nil.foundation>
-// Copyright (c) 2021 Ilias Khairullin <ilias@nil.foundation>
+// Copyright (c) 2018-2022 Mikhail Komarov <nemo@nil.foundation>
+// Copyright (c) 2022 Ilias Khairullin <ilias@nil.foundation>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,17 +46,18 @@
 #include <nil/crypto3/zk/components/disjunction.hpp>
 
 #include <nil/crypto3/zk/snark/systems/ppzksnark/r1cs_gg_ppzksnark.hpp>
-#include <nil/crypto3/zk/snark/systems/ppzksnark/r1cs_gg_ppzksnark/marshalling.hpp>
+//#include <nil/crypto3/zk/snark/systems/ppzksnark/r1cs_gg_ppzksnark/marshalling.hpp>
 
-#include <nil/crypto3/zk/snark/algorithms/generate.hpp>
-#include <nil/crypto3/zk/snark/algorithms/verify.hpp>
-#include <nil/crypto3/zk/snark/algorithms/prove.hpp>
+#include <nil/crypto3/zk/algorithms/generate.hpp>
+#include <nil/crypto3/zk/algorithms/verify.hpp>
+#include <nil/crypto3/zk/algorithms/prove.hpp>
 
 #include <nil/marshalling/status_type.hpp>
 #include <nil/crypto3/marshalling/zk/types/r1cs_gg_ppzksnark/primary_input.hpp>
 #include <nil/crypto3/marshalling/zk/types/r1cs_gg_ppzksnark/proof.hpp>
 #include <nil/crypto3/marshalling/zk/types/r1cs_gg_ppzksnark/verification_key.hpp>
 #include <nil/crypto3/marshalling/zk/types/r1cs_gg_ppzksnark/proving_key.hpp>
+#include <nil/crypto3/marshalling/pubkey/types/elgamal_verifiable.hpp>
 
 #include <nil/crypto3/pubkey/algorithm/generate_keypair.hpp>
 #include <nil/crypto3/pubkey/algorithm/encrypt.hpp>
@@ -97,124 +98,6 @@ typename std::enable_if<std::is_same<Coordinates, curves::coordinates::projectiv
     os << "], Z:[";
     print_field_element(os, p.Z);
     os << "] )" << std::endl;
-}
-
-template<typename Curve, typename Endianness, typename ProofSystem>
-void process_basic_mode(const boost::program_options::variables_map &vm) {
-    using curve_type = Curve;
-    using endianness = Endianness;
-    using proof_system_type = ProofSystem;
-    using scalar_field_type = typename curve_type::scalar_field_type;
-
-    using unit_type = unsigned char;
-    using verification_key_marshalling_type =
-        types::r1cs_gg_ppzksnark_verification_key<nil::marshalling::field_type<endianness>,
-                                                  typename proof_system_type::verification_key_type>;
-    using proof_marshalling_type = types::r1cs_gg_ppzksnark_proof<nil::marshalling::field_type<endianness>,
-                                                                  typename proof_system_type::proof_type>;
-    using primary_input_marshalling_type =
-        types::r1cs_gg_ppzksnark_primary_input<nil::marshalling::field_type<endianness>,
-                                               typename proof_system_type::primary_input_type>;
-
-    std::cout << "Blueprint generation started..." << std::endl;
-    std::cout << "R1CS generation started..." << std::endl;
-    components::blueprint<scalar_field_type> bp = sha2_two_to_one_bp<scalar_field_type>();
-    std::cout << "R1CS generation finished." << std::endl;
-    std::cout << "Blueprint generation finished." << std::endl;
-
-    std::cout << "Keys generation started..." << std::endl;
-    const typename proof_system_type::keypair_type keypair =
-        zk::snark::generate<proof_system_type>(bp.get_constraint_system());
-    std::cout << "Keys generation finished." << std::endl;
-
-    std::cout << "Proving started..." << std::endl;
-    const typename proof_system_type::proof_type proof =
-        zk::snark::prove<proof_system_type>(keypair.first, bp.primary_input(), bp.auxiliary_input());
-    std::cout << "Proving finished." << std::endl;
-
-    std::cout << "Marshalling started..." << std::endl;
-    verification_key_marshalling_type filled_verification_key_val =
-        types::fill_r1cs_gg_ppzksnark_verification_key<typename proof_system_type::verification_key_type, endianness>(
-            keypair.second);
-
-    proof_marshalling_type filled_proof_val =
-        types::fill_r1cs_gg_ppzksnark_proof<typename proof_system_type::proof_type, endianness>(proof);
-
-    primary_input_marshalling_type filled_primary_input_val =
-        types::fill_r1cs_gg_ppzksnark_primary_input<typename proof_system_type::primary_input_type, endianness>(
-            bp.primary_input());
-
-    std::cout << "Marshalling finished." << std::endl;
-
-    std::vector<unit_type> verification_key_byteblob;
-    verification_key_byteblob.resize(filled_verification_key_val.length(), 0x00);
-    auto write_iter = verification_key_byteblob.begin();
-
-    typename nil::marshalling::status_type status =
-        filled_verification_key_val.write(write_iter, verification_key_byteblob.size());
-
-    std::vector<unit_type> proof_byteblob;
-    proof_byteblob.resize(filled_proof_val.length(), 0x00);
-    write_iter = proof_byteblob.begin();
-
-    status = filled_proof_val.write(write_iter, proof_byteblob.size());
-
-    std::vector<unit_type> primary_input_byteblob;
-
-    primary_input_byteblob.resize(filled_primary_input_val.length(), 0x00);
-    auto primary_input_write_iter = primary_input_byteblob.begin();
-
-    status = filled_primary_input_val.write(primary_input_write_iter, primary_input_byteblob.size());
-
-    std::cout << "Byteblobs filled." << std::endl;
-
-    if (vm.count("r1cs-verification-key-output")) {
-        std::ofstream out(vm["r1cs-verification-key-output"].as<std::filesystem::path>(), std::ios_base::binary);
-        for (const auto &v : verification_key_byteblob) {
-            out << v;
-        }
-        out.close();
-    }
-
-    if (vm.count("r1cs-proof-output")) {
-        std::ofstream out(vm["r1cs-proof-output"].as<std::filesystem::path>(), std::ios_base::binary);
-        for (const auto &v : proof_byteblob) {
-            out << v;
-        }
-        out.close();
-    }
-
-    if (vm.count("r1cs-primary-input-output")) {
-        std::ofstream out(vm["r1cs-primary-input-output"].as<std::filesystem::path>(), std::ios_base::binary);
-        for (const auto &v : primary_input_byteblob) {
-            out << v;
-        }
-        out.close();
-    }
-
-    // nil::marshalling::status_type provingProcessingStatus = nil::marshalling::status_type::success;
-    // typename proof_system_type::proving_key_type other =
-    //             nil::marshalling::verifier_input_deserializer_tvm<proof_system_type>::proving_key_process(
-    //                 proving_key_byteblob.cbegin(),
-    //                 proving_key_byteblob.cend(),
-    //                 provingProcessingStatus);
-
-    // BOOST_ASSERT(keypair.first == other);
-
-    if (vm.count("r1cs-verifier-input-output")) {
-        std::vector<std::uint8_t> verifier_input_output_byteblob(proof_byteblob.begin(), proof_byteblob.end());
-
-        verifier_input_output_byteblob.insert(verifier_input_output_byteblob.end(), primary_input_byteblob.begin(),
-                                              primary_input_byteblob.end());
-        verifier_input_output_byteblob.insert(verifier_input_output_byteblob.end(), verification_key_byteblob.begin(),
-                                              verification_key_byteblob.end());
-
-        std::ofstream poutf(vm["r1cs-verifier-input-output"].as<std::filesystem::path>(), std::ios_base::binary);
-        for (const auto &v : verifier_input_output_byteblob) {
-            poutf << v;
-        }
-        poutf.close();
-    }
 }
 
 struct marshaling_verification_data_groth16_encrypted_input;
@@ -654,7 +537,8 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     std::cout << "Participants key pairs generated." << std::endl;
 
     std::cout << "Merkle tree generation upon participants public keys started..." << std::endl;
-    containers::merkle_tree<enc_input_policy::merkle_hash_type, enc_input_policy::arity> tree(public_keys);
+    containers::merkle_tree<enc_input_policy::merkle_hash_type, enc_input_policy::arity> tree(std::cbegin(public_keys),
+                                                                                              std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field;
     for (auto i : tree.root()) {
         rt_field.emplace_back(int(i));
@@ -695,7 +579,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
 
     std::cout << "Administrator generates CRS..." << std::endl;
     typename enc_input_policy::proof_system::keypair_type gg_keypair =
-        snark::generate<enc_input_policy::proof_system>(bp.get_constraint_system());
+        nil::crypto3::zk::generate<enc_input_policy::proof_system>(bp.get_constraint_system());
     std::cout << "CRS generation finished." << std::endl;
 
     std::cout << "Administrator generates private, public and verification keys for El-Gamal verifiable encryption "
@@ -929,7 +813,8 @@ void process_encrypted_input_mode_init_admin_phase(const boost::program_options:
 
     std::cout << "Merkle tree generation upon participants public keys started..." << std::endl;
     auto public_keys = marshaling_policy::read_voters_public_keys(vm);
-    containers::merkle_tree<enc_input_policy::merkle_hash_type, enc_input_policy::arity> tree(public_keys);
+    containers::merkle_tree<enc_input_policy::merkle_hash_type, enc_input_policy::arity> tree(std::cbegin(public_keys),
+                                                                                              std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field;
     for (auto i : tree.root()) {
         rt_field.emplace_back(int(i));
@@ -970,7 +855,7 @@ void process_encrypted_input_mode_init_admin_phase(const boost::program_options:
 
     std::cout << "Administrator generates CRS..." << std::endl;
     typename enc_input_policy::proof_system::keypair_type gg_keypair =
-        snark::generate<enc_input_policy::proof_system>(bp.get_constraint_system());
+        nil::crypto3::zk::generate<enc_input_policy::proof_system>(bp.get_constraint_system());
     std::cout << "CRS generation finished." << std::endl;
 
     std::cout << "Administrator generates private, public and verification keys for El-Gamal verifiable encryption "
@@ -1017,7 +902,8 @@ void process_encrypted_input_mode_vote_phase(const boost::program_options::varia
 
     std::cout << "Participant with index " << proof_idx << " (vote sender) generates its merkle copath." << std::endl;
     auto public_keys = marshaling_policy::read_voters_public_keys(vm);
-    containers::merkle_tree<enc_input_policy::merkle_hash_type, enc_input_policy::arity> tree(public_keys);
+    containers::merkle_tree<enc_input_policy::merkle_hash_type, enc_input_policy::arity> tree(std::cbegin(public_keys),
+                                                                                              std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field;
     for (auto i : tree.root()) {
         rt_field.emplace_back(int(i));
@@ -1249,7 +1135,6 @@ int main(int argc, char *argv[]) {
     std::srand(std::time(0));
 
     std::string mode;
-    std::size_t tree_depth = 0;
     boost::program_options::options_description desc(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
         "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator.");
@@ -1257,7 +1142,6 @@ int main(int argc, char *argv[]) {
     desc.add_options()
     ("help,h", "Display help message.")
     ("version,v", "Display version.")
-    ("mode,m", boost::program_options::value(&mode)->default_value("encrypted_input"),"Proof system processing mode, allowed values: basic, encrypted_input.")
     ("phase,p", boost::program_options::value<std::string>(),"Execute protocol phase, allowed values:\n\t - init_voter (generate and write voters public and secret keys),\n\t - init_admin (generate and write CRS and ElGamal keys),\n\t - vote (read CRS and ElGamal keys, encrypt ballot and generate proof, then write them),\n\t - vote_verify (read voters' proofs and encrypted ballots and verify them),\n\t - tally_admin (read voters' encrypted ballots, aggregate encrypted ballots, decrypt aggregated ballot and generate decryption proof and write them),\n\t - tally_voter (read ElGamal verification and public keys, encrypted ballots, decrypted aggregated ballot, decryption proof and verify them).")
     ("voter-idx,vidx", boost::program_options::value<std::size_t>()->default_value(0),"Voter index")
     ("voter-public-key-output,vpko", boost::program_options::value<std::string>()->default_value("voter_public_key"),"Voter public key")
@@ -1276,52 +1160,37 @@ int main(int argc, char *argv[]) {
     ("eid-output,eido", boost::program_options::value<std::string>()->default_value("eid"), "Session id output path (for encrypted_input mode only).")
     ("sn-output,sno", boost::program_options::value<std::string>()->default_value("sn"), "Serial number output path (for encrypted_input mode only).")
     ("rt-output,rto", boost::program_options::value<std::string>()->default_value("rt"), "Session id output path (for encrypted_input mode only).")
-    ("tree-depth,td", boost::program_options::value<std::size_t>()->default_value(tree_depth), "Depth of Merkle tree built upon participants' public keys (for encrypted_input mode only).");
+    ("tree-depth,td", boost::program_options::value<std::size_t>()->default_value(2), "Depth of Merkle tree built upon participants' public keys (for encrypted_input mode only).");
     // clang-format on
 
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(desc).run(), vm);
     boost::program_options::notify(vm);
 
-    if (vm.count("help") || argc < 2) {
+    if (vm.count("help")) {
         std::cout << desc << std::endl;
         return 0;
     }
 
-    if (!vm.count("mode")) {
-        std::cout << desc << std::endl;
-        return 0;
-    } else if (vm["mode"].as<std::string>() == "basic") {
-        using curve_type = algebra::curves::bls12<381>;
-        using scalar_field_type = typename curve_type::scalar_field_type;
-        using endianness = nil::marshalling::option::big_endian;
-        using proof_system_type = zk::snark::r1cs_gg_ppzksnark<curve_type>;
-
-        process_basic_mode<curve_type, endianness, proof_system_type>(vm);
-    } else if (vm["mode"].as<std::string>() == "encrypted_input") {
-        if (!vm.count("phase")) {
-            process_encrypted_input_mode(vm);
-        } else {
-            if (vm["phase"].as<std::string>() == "init_voter") {
-                process_encrypted_input_mode_init_voter_phase(vm);
-            } else if (vm["phase"].as<std::string>() == "init_admin") {
-                process_encrypted_input_mode_init_admin_phase(vm);
-            } else if (vm["phase"].as<std::string>() == "vote") {
-                process_encrypted_input_mode_vote_phase(vm);
-            } else if (vm["phase"].as<std::string>() == "vote_verify") {
-                process_encrypted_input_mode_vote_verify_phase(vm);
-            } else if (vm["phase"].as<std::string>() == "tally_admin") {
-                process_encrypted_input_mode_tally_admin_phase(vm);
-            } else if (vm["phase"].as<std::string>() == "tally_voter") {
-                process_encrypted_input_mode_tally_voter_phase(vm);
-            } else {
-                std::cout << desc << std::endl;
-                return 0;
-            }
-        }
+    if (!vm.count("phase")) {
+        process_encrypted_input_mode(vm);
     } else {
-        std::cout << desc << std::endl;
-        return 0;
+        if (vm["phase"].as<std::string>() == "init_voter") {
+            process_encrypted_input_mode_init_voter_phase(vm);
+        } else if (vm["phase"].as<std::string>() == "init_admin") {
+            process_encrypted_input_mode_init_admin_phase(vm);
+        } else if (vm["phase"].as<std::string>() == "vote") {
+            process_encrypted_input_mode_vote_phase(vm);
+        } else if (vm["phase"].as<std::string>() == "vote_verify") {
+            process_encrypted_input_mode_vote_verify_phase(vm);
+        } else if (vm["phase"].as<std::string>() == "tally_admin") {
+            process_encrypted_input_mode_tally_admin_phase(vm);
+        } else if (vm["phase"].as<std::string>() == "tally_voter") {
+            process_encrypted_input_mode_tally_voter_phase(vm);
+        } else {
+            std::cout << desc << std::endl;
+            return 0;
+        }
     }
 
     return 0;

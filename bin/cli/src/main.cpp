@@ -1125,7 +1125,9 @@ void process_encrypted_input_mode_tally_voter_phase(const boost::program_options
 int main(int argc, char *argv[]) {
     std::srand(std::time(0));
 
-    std::string mode;
+#if EMSCRIPTEN
+
+#else
     boost::program_options::options_description desc(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
         "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator.");
@@ -1182,6 +1184,7 @@ int main(int argc, char *argv[]) {
             return 0;
         }
     }
+#endif
 
     return 0;
 }

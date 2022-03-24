@@ -6,7 +6,7 @@ include(CMSetupVersion)
 
 cm_project(cli WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
 
-if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
+if(NOT CMAKE_CROSSCOMPILING)
     cm_find_package(Boost COMPONENTS filesystem log log_setup program_options thread system)
 endif()
 

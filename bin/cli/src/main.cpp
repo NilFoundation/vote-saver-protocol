@@ -26,9 +26,6 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
-#include <boost/test/unit_test.hpp>
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/data/monomorphic.hpp>
 
 #include "detail/r1cs_examples.hpp"
 #include "detail/sha256_component.hpp"

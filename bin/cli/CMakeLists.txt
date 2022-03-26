@@ -66,7 +66,3 @@ elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
                           LINK_FLAGS "-s USE_BOOST_HEADERS=1")
 
 endif()
-
-if(BUILD_TESTS)
-    add_subdirectory(test)
-endif()

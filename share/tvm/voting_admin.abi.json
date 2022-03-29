@@ -1,0 +1,253 @@
+{
+	"ABI version": 2,
+	"version": "2.2",
+	"header": ["time"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "update_crs",
+			"inputs": [
+				{"name":"pk","type":"bytes"},
+				{"name":"vk","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "reset_crs",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "reset_context",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "init_voting_session",
+			"inputs": [
+				{"name":"eid","type":"bytes"},
+				{"name":"pk_eid","type":"bytes"},
+				{"name":"vk_eid","type":"bytes"},
+				{"name":"voters_addresses","type":"address[]"},
+				{"name":"rt","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "check_ballot",
+			"inputs": [
+				{"name":"answerId","type":"uint32"},
+				{"name":"eid","type":"bytes"},
+				{"name":"sn","type":"bytes"}
+			],
+			"outputs": [
+				{"name":"value0","type":"int32"}
+			]
+		},
+		{
+			"name": "uncommit_ballot",
+			"inputs": [
+				{"name":"answerId","type":"uint32"}
+			],
+			"outputs": [
+				{"name":"value0","type":"int32"}
+			]
+		},
+		{
+			"name": "reset_tally",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "update_tally",
+			"inputs": [
+				{"name":"ct_sum","type":"bytes"},
+				{"name":"m_sum","type":"bytes"},
+				{"name":"dec_proof","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "commit_tally",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "get_crs_pk",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_crs_vk",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_voters_addresses",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"address[]"}
+			]
+		},
+		{
+			"name": "get_pk_eid",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_vk_eid",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_eid",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_rt",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_ct_sum",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_m_sum",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_dec_proof",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_voter_status",
+			"inputs": [
+				{"name":"voter_addr","type":"address"}
+			],
+			"outputs": [
+				{"name":"value0","type":"bool"}
+			]
+		},
+		{
+			"name": "get_voters_statuses",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"map(address,bool)"}
+			]
+		},
+		{
+			"name": "reset_voter_msg_accepted",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "get_voter_msg_accepted",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"uint32"}
+			]
+		},
+		{
+			"name": "get_is_tally_committed",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bool"}
+			]
+		},
+		{
+			"name": "m_eid",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_eid","type":"bytes"}
+			]
+		},
+		{
+			"name": "m_crs",
+			"inputs": [
+			],
+			"outputs": [
+				{"components":[{"name":"pk","type":"bytes"},{"name":"vk","type":"bytes"}],"name":"m_crs","type":"tuple"}
+			]
+		},
+		{
+			"name": "m_session_state",
+			"inputs": [
+			],
+			"outputs": [
+				{"components":[{"name":"voters_number","type":"uint256"},{"name":"pk_eid","type":"bytes"},{"name":"vk_eid","type":"bytes"},{"name":"voters_addresses","type":"address[]"},{"name":"voter_map_accepted","type":"map(address,bool)"},{"name":"rt","type":"bytes"},{"name":"ct_sum","type":"bytes"},{"name":"m_sum","type":"bytes"},{"name":"dec_proof","type":"bytes"}],"name":"m_session_state","type":"tuple"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	],
+	"fields": [
+		{"name":"_pubkey","type":"uint256"},
+		{"name":"_timestamp","type":"uint64"},
+		{"name":"_constructorFlag","type":"bool"},
+		{"name":"m_eid","type":"bytes"},
+		{"components":[{"name":"pk","type":"bytes"},{"name":"vk","type":"bytes"}],"name":"m_crs","type":"tuple"},
+		{"components":[{"name":"voters_number","type":"uint256"},{"name":"pk_eid","type":"bytes"},{"name":"vk_eid","type":"bytes"},{"name":"voters_addresses","type":"address[]"},{"name":"voter_map_accepted","type":"map(address,bool)"},{"name":"rt","type":"bytes"},{"name":"ct_sum","type":"bytes"},{"name":"m_sum","type":"bytes"},{"name":"dec_proof","type":"bytes"}],"name":"m_session_state","type":"tuple"},
+		{"name":"m_all_eid","type":"optional(cell)"},
+		{"name":"m_all_sn","type":"optional(cell)"},
+		{"name":"m_voter_msg_accepted","type":"uint32"},
+		{"name":"m_is_tally_committed","type":"bool"}
+	]
+}

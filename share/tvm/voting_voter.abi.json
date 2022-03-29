@@ -1,0 +1,201 @@
+{
+	"ABI version": 2,
+	"version": "2.2",
+	"header": ["time"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+				{"name":"pk","type":"bytes"},
+				{"name":"admin","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "update_admin",
+			"inputs": [
+				{"name":"new_admin","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "reset_ballot",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "update_ballot",
+			"inputs": [
+				{"name":"vi","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "commit_ballot",
+			"inputs": [
+				{"name":"proof_end","type":"uint32"},
+				{"name":"ct_begin","type":"uint32"},
+				{"name":"ct_end","type":"uint32"},
+				{"name":"eid_begin","type":"uint32"},
+				{"name":"sn_begin","type":"uint32"},
+				{"name":"rt_begin","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "get_pk",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_proof",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_ct",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_eid",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_sn",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_rt",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "get_vi_len",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"uint256"}
+			]
+		},
+		{
+			"name": "get_vi",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bytes"}
+			]
+		},
+		{
+			"name": "is_vote_accepted",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bool"}
+			]
+		},
+		{
+			"name": "on_uncommit_ballot",
+			"inputs": [
+				{"name":"result_status","type":"int32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "on_check_ballot",
+			"inputs": [
+				{"name":"result_status","type":"int32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "set_pk",
+			"inputs": [
+				{"name":"pk","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "reset_callback_status",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "get_callback_status",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"int32"}
+			]
+		},
+		{
+			"name": "m_pk",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_pk","type":"bytes"}
+			]
+		},
+		{
+			"name": "m_is_vote_accepted",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_is_vote_accepted","type":"bool"}
+			]
+		},
+		{
+			"name": "m_ballot",
+			"inputs": [
+			],
+			"outputs": [
+				{"components":[{"name":"vi","type":"bytes"},{"name":"proof_end","type":"uint32"},{"name":"ct_begin","type":"uint32"},{"name":"ct_end","type":"uint32"},{"name":"eid_begin","type":"uint32"},{"name":"sn_begin","type":"uint32"},{"name":"rt_begin","type":"uint32"}],"name":"m_ballot","type":"tuple"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	],
+	"fields": [
+		{"name":"_pubkey","type":"uint256"},
+		{"name":"_timestamp","type":"uint64"},
+		{"name":"_constructorFlag","type":"bool"},
+		{"name":"m_current_admin","type":"address"},
+		{"name":"m_pk","type":"bytes"},
+		{"name":"m_is_vote_accepted","type":"bool"},
+		{"components":[{"name":"vi","type":"bytes"},{"name":"proof_end","type":"uint32"},{"name":"ct_begin","type":"uint32"},{"name":"ct_end","type":"uint32"},{"name":"eid_begin","type":"uint32"},{"name":"sn_begin","type":"uint32"},{"name":"rt_begin","type":"uint32"}],"name":"m_ballot","type":"tuple"},
+		{"name":"m_callback_status","type":"int32"}
+	]
+}

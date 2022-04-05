@@ -16,6 +16,4 @@ github_release_note.md
 .make-detach-steps.bash
 *.swo
 *.log
-*.abi.json
 *.code
-*.tvc

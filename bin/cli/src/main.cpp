@@ -263,18 +263,19 @@ struct marshaling_policy {
         }
     }
 
-    static void write_initial_phase_admin_data(const boost::program_options::variables_map &vm,
-                                               const proving_key_type &pk_crs, const verification_key_type &vk_crs,
-                                               const elgamal_public_key_type &pk_eid,
-                                               const elgamal_private_key_type &sk_eid,
-                                               const elgamal_verification_key_type &vk_eid,
-                                               const primary_input_type &eid, const primary_input_type &rt) {
+    static void write_initial_phase_admin_data(
+        const proving_key_type &pk_crs, const verification_key_type &vk_crs, const elgamal_public_key_type &pk_eid,
+        const elgamal_private_key_type &sk_eid, const elgamal_verification_key_type &vk_eid,
+        const primary_input_type &eid, const primary_input_type &rt, const std::string &r1cs_proving_key_out,
+        const std::string &r1cs_verification_key_out, const std::string &public_key_output,
+        const std::string &secret_key_output, const std::string &verification_key_output, const std::string &eid_output,
+        const std::string &rt_output) {
         auto pk_crs_blob = serialize_obj<r1cs_proving_key_marshalling_type>(
             pk_crs,
             std::function(
                 nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_proving_key<proving_key_type, endianness>));
-        if (vm.count("r1cs-proving-key-output")) {
-            auto filename = vm["r1cs-proving-key-output"].as<std::string>() + ".bin";
+        if (!r1cs_proving_key_out.empty()) {
+            auto filename = r1cs_proving_key_out + ".bin";
             write_obj(std::filesystem::path(filename), {pk_crs_blob});
         }
 
@@ -283,24 +284,24 @@ struct marshaling_policy {
             std::function(
                 nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_verification_key<verification_key_type,
                                                                                           endianness>));
-        if (vm.count("r1cs-verification-key-output")) {
-            auto filename = vm["r1cs-verification-key-output"].as<std::string>() + ".bin";
+        if (!r1cs_verification_key_out.empty()) {
+            auto filename = r1cs_verification_key_out + ".bin";
             write_obj(std::filesystem::path(filename), {vk_crs_blob});
         }
 
         auto pk_eid_blob = serialize_obj<public_key_marshaling_type>(
             pk_eid,
             std::function(nil::crypto3::marshalling::types::fill_public_key<elgamal_public_key_type, endianness>));
-        if (vm.count("public-key-output")) {
-            auto filename = vm["public-key-output"].as<std::string>() + ".bin";
+        if (!public_key_output.empty()) {
+            auto filename = public_key_output + ".bin";
             write_obj(std::filesystem::path(filename), {pk_eid_blob});
         }
 
         auto sk_eid_blob = serialize_obj<secret_key_marshaling_type>(
             sk_eid,
             std::function(nil::crypto3::marshalling::types::fill_private_key<elgamal_private_key_type, endianness>));
-        if (vm.count("secret-key-output")) {
-            auto filename = vm["secret-key-output"].as<std::string>() + ".bin";
+        if (!secret_key_output.empty()) {
+            auto filename = secret_key_output + ".bin";
             write_obj(std::filesystem::path(filename), {sk_eid_blob});
         }
 
@@ -308,8 +309,8 @@ struct marshaling_policy {
             vk_eid,
             std::function(
                 nil::crypto3::marshalling::types::fill_verification_key<elgamal_verification_key_type, endianness>));
-        if (vm.count("verification-key-output")) {
-            auto filename = vm["verification-key-output"].as<std::string>() + ".bin";
+        if (!verification_key_output.empty()) {
+            auto filename = verification_key_output + ".bin";
             write_obj(std::filesystem::path(filename), {vk_eid_blob});
         }
 
@@ -317,8 +318,8 @@ struct marshaling_policy {
             eid,
             std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
                                                                                                  endianness>));
-        if (vm.count("eid-output")) {
-            auto filename = vm["eid-output"].as<std::string>() + ".bin";
+        if (!eid_output.empty()) {
+            auto filename = eid_output + ".bin";
             write_obj(std::filesystem::path(filename), {eid_blob});
         }
 
@@ -326,8 +327,8 @@ struct marshaling_policy {
             rt,
             std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
                                                                                                  endianness>));
-        if (vm.count("rt-output")) {
-            auto filename = vm["rt-output"].as<std::string>() + ".bin";
+        if (!rt_output.empty()) {
+            auto filename = rt_output + ".bin";
             write_obj(std::filesystem::path(filename), {rt_blob});
         }
     }
@@ -645,8 +646,15 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     std::cout << "====================================================================" << std::endl << std::endl;
 
     std::cout << "Administrator initial phase marshalling started..." << std::endl;
-    marshaling_policy::write_initial_phase_admin_data(vm, gg_keypair.first, gg_keypair.second, std::get<0>(keypair),
-                                                      std::get<1>(keypair), std::get<2>(keypair), eid_field, rt_field);
+    marshaling_policy::write_initial_phase_admin_data(
+        gg_keypair.first, gg_keypair.second, std::get<0>(keypair), std::get<1>(keypair), std::get<2>(keypair),
+        eid_field, rt_field, vm.count("r1cs-proving-key-output") ? vm["r1cs-proving-key-output"].as<std::string>() : "",
+        vm.count("r1cs-verification-key-output") ? vm["r1cs-verification-key-output"].as<std::string>() : "",
+        vm.count("public-key-output") ? vm["public-key-output"].as<std::string>() : "",
+        vm.count("secret-key-output") ? vm["secret-key-output"].as<std::string>() : "",
+        vm.count("verification-key-output") ? vm["verification-key-output"].as<std::string>() : "",
+        vm.count("eid-output") ? vm["eid-output"].as<std::string>() : "",
+        vm.count("rt-output") ? vm["-output"].as<std::string>() : "");
     std::cout << "Marshalling finished." << std::endl;
 
     std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type> ct_n;
@@ -908,8 +916,15 @@ void process_encrypted_input_mode_init_admin_phase(const boost::program_options:
     std::cout << "====================================================================" << std::endl << std::endl;
 
     std::cout << "Administrator initial phase marshalling started..." << std::endl;
-    marshaling_policy::write_initial_phase_admin_data(vm, gg_keypair.first, gg_keypair.second, std::get<0>(keypair),
-                                                      std::get<1>(keypair), std::get<2>(keypair), eid_field, rt_field);
+    marshaling_policy::write_initial_phase_admin_data(
+        gg_keypair.first, gg_keypair.second, std::get<0>(keypair), std::get<1>(keypair), std::get<2>(keypair),
+        eid_field, rt_field, vm.count("r1cs-proving-key-output") ? vm["r1cs-proving-key-output"].as<std::string>() : "",
+        vm.count("r1cs-verification-key-output") ? vm["r1cs-verification-key-output"].as<std::string>() : "",
+        vm.count("public-key-output") ? vm["public-key-output"].as<std::string>() : "",
+        vm.count("secret-key-output") ? vm["secret-key-output"].as<std::string>() : "",
+        vm.count("verification-key-output") ? vm["verification-key-output"].as<std::string>() : "",
+        vm.count("eid-output") ? vm["eid-output"].as<std::string>() : "",
+        vm.count("rt-output") ? vm["-output"].as<std::string>() : "");
     std::cout << "Marshalling finished." << std::endl;
 }
 

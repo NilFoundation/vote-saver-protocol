@@ -441,14 +441,14 @@ struct marshaling_policy {
         return result;
     }
 
-    static std::vector<std::vector<bool>> read_voters_public_keys(const boost::program_options::variables_map &vm) {
-        std::size_t participants_number = 1 << vm["tree-depth"].as<std::size_t>();
+    static std::vector<std::vector<bool>> read_voters_public_keys(std::size_t tree_depth,
+                                                                  const std::string &voter_public_key_output) {
+        std::size_t participants_number = 1 << tree_depth;
         std::vector<std::vector<bool>> result;
 
         for (auto i = 0; i < participants_number; i++) {
-            if (vm.count("voter-public-key-output")) {
-                result.emplace_back(
-                    read_bool_vector(vm["voter-public-key-output"].as<std::string>() + std::to_string(i)));
+            if (!voter_public_key_output.empty()) {
+                result.emplace_back(read_bool_vector(voter_public_key_output + std::to_string(i)));
             }
         }
         return result;
@@ -579,7 +579,9 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         rt_field.emplace_back(int(i));
     }
 
-    auto public_keys_read = marshaling_policy::read_voters_public_keys(vm);
+    auto public_keys_read = marshaling_policy::read_voters_public_keys(
+        vm["tree-depth"].as<std::size_t>(),
+        vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "");
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>
         tree_built_from_read(std::cbegin(public_keys_read), std::cend(public_keys_read));
     std::vector<scalar_field_value_type> rt_field_from_read;
@@ -841,16 +843,15 @@ void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, const 
     std::cout << "Marshalling finished." << std::endl;
 }
 
-void process_encrypted_input_mode_init_admin_phase(const boost::program_options::variables_map &vm) {
+void process_encrypted_input_mode_init_admin_phase(const boost::program_options::variables_map &vm,
+                                                   std::size_t tree_depth, std::size_t eid_bits) {
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
 
     std::cout << "Administrator pre-initializes voting session..." << std::endl << std::endl;
 
-    BOOST_ASSERT_MSG(vm.count("tree-depth"), "Tree depth is not specified!");
-    std::size_t tree_depth = vm["tree-depth"].as<std::size_t>();
-
     std::cout << "Merkle tree generation upon participants public keys started..." << std::endl;
-    auto public_keys = marshaling_policy::read_voters_public_keys(vm);
+    auto public_keys = marshaling_policy::read_voters_public_keys(
+        tree_depth, vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "");
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
         std::cbegin(public_keys), std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field;
@@ -859,9 +860,7 @@ void process_encrypted_input_mode_init_admin_phase(const boost::program_options:
     }
     std::cout << "Merkle tree generation finished." << std::endl;
 
-    BOOST_ASSERT_MSG(vm.count("eid-bits"), "Eid length is not specified!");
-    const std::size_t eid_size = vm["eid-bits"].as<std::size_t>();
-    std::vector<bool> eid(eid_size);
+    std::vector<bool> eid(eid_bits);
     std::vector<scalar_field_value_type> eid_field;
     std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
     std::cout << "Voting session (eid) is: ";
@@ -928,26 +927,25 @@ void process_encrypted_input_mode_init_admin_phase(const boost::program_options:
     std::cout << "Marshalling finished." << std::endl;
 }
 
-void process_encrypted_input_mode_vote_phase(const boost::program_options::variables_map &vm) {
+void process_encrypted_input_mode_vote_phase(const boost::program_options::variables_map &vm, std::size_t tree_depth,
+                                             std::size_t voter_idx) {
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
 
-    BOOST_ASSERT_MSG(vm.count("tree-depth"), "Tree depth is not specified!");
-    std::size_t tree_depth = vm["tree-depth"].as<std::size_t>();
     std::size_t participants_number = 1 << tree_depth;
 
-    BOOST_ASSERT_MSG(vm.count("voter-idx"), "Voter index is not specified!");
-    std::size_t proof_idx = vm["voter-idx"].as<std::size_t>();
+    std::size_t proof_idx = voter_idx;
     BOOST_ASSERT_MSG(participants_number > proof_idx, "Voter index should be lass than number of participants!");
 
     std::cout << "Voter " << proof_idx << " generate encrypted ballot" << std::endl << std::endl;
 
     std::cout << "Voter with index " << proof_idx << " generates its merkle copath..." << std::endl;
-    auto public_keys = marshaling_policy::read_voters_public_keys(vm);
+    auto public_keys = marshaling_policy::read_voters_public_keys(
+        tree_depth, vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "");
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
         std::cbegin(public_keys), std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field;
-    for (auto i : tree.root()) {
-        rt_field.emplace_back(int(i));
+    for (int i : tree.root()) {
+        rt_field.emplace_back(i);
     }
     BOOST_ASSERT(rt_field == marshaling_policy::read_scalar_vector(vm["rt-output"].as<std::string>()));
     containers::merkle_proof<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> path(tree,
@@ -1066,14 +1064,13 @@ void process_encrypted_input_mode_vote_phase(const boost::program_options::varia
     std::cout << "Encryption verification of rerandomazed cipher text and proof finished." << std::endl;
 }
 
-void process_encrypted_input_mode_tally_admin_phase(const boost::program_options::variables_map &vm) {
+void process_encrypted_input_mode_tally_admin_phase(const boost::program_options::variables_map &vm,
+                                                    std::size_t tree_depth) {
     std::cout << "Administrator processes tally phase - aggregates encrypted ballots, decrypts aggregated ballot, "
                  "generate decryption proof..."
               << std::endl
               << std::endl;
 
-    BOOST_ASSERT_MSG(vm.count("tree-depth"), "Tree depth is not specified!");
-    std::size_t tree_depth = vm["tree-depth"].as<std::size_t>();
     std::size_t participants_number = 1 << tree_depth;
 
     auto ct_agg = marshaling_policy::read_ct(vm, 0);
@@ -1112,14 +1109,14 @@ void process_encrypted_input_mode_tally_admin_phase(const boost::program_options
     std::cout << "Marshalling finished." << std::endl;
 }
 
-void process_encrypted_input_mode_tally_voter_phase(const boost::program_options::variables_map &vm) {
+void process_encrypted_input_mode_tally_voter_phase(const boost::program_options::variables_map &vm,
+                                                    std::size_t tree_depth) {
     std::cout << "Voter processes tally phase - aggregates encrypted ballots, verifies voting result using decryption "
                  "proof..."
               << std::endl
               << std::endl;
 
     BOOST_ASSERT_MSG(vm.count("tree-depth"), "Tree depth is not specified!");
-    std::size_t tree_depth = vm["tree-depth"].as<std::size_t>();
     std::size_t participants_number = 1 << tree_depth;
 
     auto ct_agg = marshaling_policy::read_ct(vm, 0);
@@ -1201,13 +1198,17 @@ int main(int argc, char *argv[]) {
                 vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "",
                 vm.count("voter-secret-key-output") ? vm["voter-secret-key-output"].as<std::string>() : "");
         } else if (vm["phase"].as<std::string>() == "init_admin") {
-            process_encrypted_input_mode_init_admin_phase(vm);
+            BOOST_ASSERT_MSG(vm.count("tree-depth"), "Tree depth is not specified!");
+
+            process_encrypted_input_mode_init_admin_phase(vm, vm["tree-depth"].as<std::size_t>(),
+                                                          vm["eid-bits"].as<std::size_t>());
         } else if (vm["phase"].as<std::string>() == "vote") {
-            process_encrypted_input_mode_vote_phase(vm);
+            process_encrypted_input_mode_vote_phase(vm, vm["tree-depth"].as<std::size_t>(),
+                                                    vm["voter-idx"].as<std::size_t>());
         } else if (vm["phase"].as<std::string>() == "tally_admin") {
-            process_encrypted_input_mode_tally_admin_phase(vm);
+            process_encrypted_input_mode_tally_admin_phase(vm, vm["tree-depth"].as<std::size_t>());
         } else if (vm["phase"].as<std::string>() == "tally_voter") {
-            process_encrypted_input_mode_tally_voter_phase(vm);
+            process_encrypted_input_mode_tally_voter_phase(vm, vm["tree-depth"].as<std::size_t>());
         } else {
             std::cout << desc << std::endl;
             return 0;

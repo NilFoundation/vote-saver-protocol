@@ -263,6 +263,19 @@ struct marshaling_policy {
         }
     }
 
+    static void serialize_initial_phase_voter_data(const std::vector<scalar_field_value_type> &voter_pubkey,
+                                               const std::vector<scalar_field_value_type> &voter_skey, std::vector<std::uint8_t> &voter_pk_out,
+                                                   std::vector<std::uint8_t> &voter_sk_out) {
+        voter_pk_out = serialize_obj<pinput_marshaling_type>(
+            voter_pubkey,
+            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
+                                                                                                 endianness>));
+        voter_sk_out = serialize_obj<pinput_marshaling_type>(
+            voter_skey,
+            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
+                                                                                                 endianness>));
+    }
+
     static void write_initial_phase_admin_data(
         const proving_key_type &pk_crs, const verification_key_type &vk_crs, const elgamal_public_key_type &pk_eid,
         const elgamal_private_key_type &sk_eid, const elgamal_verification_key_type &vk_eid,
@@ -814,8 +827,8 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     std::cout << "Verification of the deciphered tally result succeeded." << std::endl;
 }
 
-void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, const std::string &voter_pk_out,
-                                                   const std::string &voter_sk_out) {
+void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, std::vector<std::uint8_t> &voter_pk_out,
+                                                   std::vector<std::uint8_t> &voter_sk_out) {
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
 
     std::size_t proof_idx = voter_idx;
@@ -839,7 +852,7 @@ void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, const 
     std::cout << "Participants key pairs generated." << std::endl;
 
     std::cout << "Voter " << proof_idx << " keypair marshalling started..." << std::endl;
-    marshaling_policy::write_initial_phase_voter_data(pk_field, sk_field, proof_idx, voter_pk_out, voter_sk_out);
+    marshaling_policy::serialize_initial_phase_voter_data(pk_field, sk_field, voter_pk_out, voter_sk_out);
     std::cout << "Marshalling finished." << std::endl;
 }
 
@@ -1193,10 +1206,26 @@ int main(int argc, char *argv[]) {
         process_encrypted_input_mode(vm);
     } else {
         if (vm["phase"].as<std::string>() == "init_voter") {
+            std::vector<std::uint8_t> voter_public_key_bb;
+            std::vector<std::uint8_t> voter_secret_key_bb;
+            std::string voter_pk_out = vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "";
+            std::string voter_sk_out = vm.count("voter-secret-key-output") ? vm["voter-secret-key-output"].as<std::string>() : "";
+
             process_encrypted_input_mode_init_voter_phase(
                 vm["voter-idx"].as<std::size_t>(),
-                vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "",
-                vm.count("voter-secret-key-output") ? vm["voter-secret-key-output"].as<std::string>() : "");
+                voter_public_key_bb,
+                voter_secret_key_bb);
+            
+            if (!voter_pk_out.empty()) {
+                auto filename = voter_pk_out + std::to_string(vm["voter-idx"].as<std::size_t>()) + ".bin";
+                marshaling_policy::write_obj(std::filesystem::path(filename), {voter_public_key_bb});
+            }
+
+            if (!voter_sk_out.empty()) {
+                auto filename = voter_sk_out + std::to_string(vm["voter-idx"].as<std::size_t>()) + ".bin";
+                marshaling_policy::write_obj(std::filesystem::path(filename), {voter_secret_key_bb});
+            }
+                
         } else if (vm["phase"].as<std::string>() == "init_admin") {
             BOOST_ASSERT_MSG(vm.count("tree-depth"), "Tree depth is not specified!");
 

@@ -531,6 +531,20 @@ struct marshaling_policy {
         }
     }
 
+        static void
+        serialize_tally_phase_data(const typename encrypted_input_policy::encryption_scheme_type::decipher_type &dec,
+                               std::vector<std::uint8_t> &dec_proof_blob,
+                               std::vector<std::uint8_t> &voting_res_blob
+) {
+        nil::marshalling::status_type status;
+        dec_proof_blob = static_cast<std::vector<std::uint8_t>>(nil::marshalling::pack<endianness>(dec.second, status));
+
+        voting_res_blob = serialize_obj<pinput_marshaling_type>(
+            dec.first,
+            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<
+                          std::vector<scalar_field_value_type>, endianness>));
+    }
+
     static std::vector<scalar_field_value_type> read_scalar_vector(const std::string &file_prefix) {
         auto filename = file_prefix + ".bin";
         return deserialize_obj<pinput_marshaling_type, std::vector<scalar_field_value_type>>(
@@ -1175,8 +1189,14 @@ void process_encrypted_input_mode_vote_phase(std::size_t tree_depth,
     std::cout << "Encryption verification of rerandomazed cipher text and proof finished." << std::endl;
 }
 
-void process_encrypted_input_mode_tally_admin_phase(const boost::program_options::variables_map &vm,
-                                                    std::size_t tree_depth) {
+void process_encrypted_input_mode_tally_admin_phase(std::size_t tree_depth,
+                                                    const std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> &cts,
+                                                    const typename marshaling_policy::elgamal_private_key_type &sk_eid,
+                                                    const typename marshaling_policy::elgamal_verification_key_type &vk_eid,
+                                                    const typename encrypted_input_policy::proof_system::keypair_type &gg_keypair,
+                                                    std::vector<std::uint8_t> &dec_proof_blob,
+                                                    std::vector<std::uint8_t> &voting_res_blob
+                                                    ) {
     std::cout << "Administrator processes tally phase - aggregates encrypted ballots, decrypts aggregated ballot, "
                  "generate decryption proof..."
               << std::endl
@@ -1184,21 +1204,16 @@ void process_encrypted_input_mode_tally_admin_phase(const boost::program_options
 
     std::size_t participants_number = 1 << tree_depth;
 
-    auto ct_agg = marshaling_policy::read_ct(vm, 0);
+    auto ct_agg = cts[0];
     std::cout << "Administrator counts final results..." << std::endl;
     for (auto proof_idx = 1; proof_idx < participants_number; proof_idx++) {
-        auto ct_i = marshaling_policy::read_ct(vm, proof_idx);
+        auto ct_i = cts[proof_idx];
         BOOST_ASSERT_MSG(std::size(ct_agg) == std::size(ct_i), "Wrong size of the ct!");
         for (std::size_t i = 0; i < std::size(ct_i); ++i) {
             ct_agg[i] = ct_agg[i] + ct_i[i];
         }
     }
     std::cout << "Final results are ready." << std::endl;
-
-    auto sk_eid = marshaling_policy::read_sk_eid(vm);
-    auto vk_eid = marshaling_policy::read_vk_eid(vm);
-    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {marshaling_policy::read_pk_crs(vm),
-                                                                              marshaling_policy::read_vk_crs(vm)};
 
     std::cout << "Final results decryption..." << std::endl;
     typename encrypted_input_policy::encryption_scheme_type::decipher_type decipher_rerand_sum_text =
@@ -1216,7 +1231,8 @@ void process_encrypted_input_mode_tally_admin_phase(const boost::program_options
     std::cout << std::endl;
 
     std::cout << "Tally phase marshalling started..." << std::endl;
-    marshaling_policy::write_tally_phase_data(vm, decipher_rerand_sum_text);
+    marshaling_policy::serialize_tally_phase_data(decipher_rerand_sum_text,
+                        dec_proof_blob, voting_res_blob);
     std::cout << "Marshalling finished." << std::endl;
 }
 
@@ -1431,7 +1447,38 @@ int main(int argc, char *argv[]) {
             }
             
         } else if (vm["phase"].as<std::string>() == "tally_admin") {
-            process_encrypted_input_mode_tally_admin_phase(vm, vm["tree-depth"].as<std::size_t>());
+            auto tree_depth = vm["tree-depth"].as<std::size_t>();
+            auto sk_eid = marshaling_policy::read_sk_eid(vm);
+            auto vk_eid = marshaling_policy::read_vk_eid(vm);
+            typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {marshaling_policy::read_pk_crs(vm),
+                                                                                      marshaling_policy::read_vk_crs(vm)};
+            std::size_t participants_number = 1 << tree_depth;
+            std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
+            cts.reserve(participants_number);
+            for (auto proof_idx = 0; proof_idx < participants_number; proof_idx++) {
+                cts[proof_idx] = marshaling_policy::read_ct(vm, proof_idx);
+            }
+
+            std::vector<std::uint8_t> dec_proof_blob;
+            std::vector<std::uint8_t> voting_res_blob;
+            
+            process_encrypted_input_mode_tally_admin_phase(tree_depth,
+                cts, sk_eid, vk_eid, gg_keypair,
+                dec_proof_blob, voting_res_blob);
+            
+                    if (vm.count("decryption-proof-output")) {
+                        auto filename = vm["decryption-proof-output"].as<std::string>() + ".bin";
+                        marshaling_policy::write_obj(filename, {
+                                                dec_proof_blob,
+                                            });
+                    }
+
+                    if (vm.count("voting-result-output")) {
+                        auto filename = vm["voting-result-output"].as<std::string>() + ".bin";
+                        marshaling_policy::write_obj(filename, {
+                                                voting_res_blob,
+                                            });
+                    }
         } else if (vm["phase"].as<std::string>() == "tally_voter") {
             process_encrypted_input_mode_tally_voter_phase(vm, vm["tree-depth"].as<std::size_t>());
         } else {

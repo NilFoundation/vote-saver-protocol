@@ -8,6 +8,21 @@ cm_project(cli WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
 
 if(NOT CMAKE_CROSSCOMPILING)
     cm_find_package(Boost COMPONENTS filesystem log log_setup program_options thread system)
+elseif(CMAKE_CROSSCOMPILING)
+    if(NOT TARGET boost)
+        include(ExternalProject)
+        set(Boost_LIBRARIES boost_random)
+        externalproject_add(boost
+                            PREFIX ${CMAKE_BINARY_DIR}/libs/boost
+                            GIT_REPOSITORY git@github.com:boostorg/boost.git
+                            GIT_TAG boost-1.77.0
+                            BUILD_IN_SOURCE TRUE
+                            CMAKE_ARGS -DCMAKE_CROSSCOMPILING_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+                            BUILD_COMMAND cmake --build . --target ${Boost_LIBRARIES}
+                            INSTALL_COMMAND "")
+    else()
+        set(Boost_LIBRARIES boost_random)
+    endif()
 endif()
 
 cm_setup_version(VERSION 0.1.0)
@@ -62,7 +77,9 @@ if(APPLE OR NOT ${CMAKE_TARGET_ARCHITECTURE} STREQUAL ${CMAKE_HOST_SYSTEM_PROCES
                           XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM}")
 elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set_target_properties(${CURRENT_PROJECT_NAME} PROPERTIES
-                          COMPILE_FLAGS "-s USE_BOOST_HEADERS=1 -s EXPORTED_RUNTIME_METHODS=ccall,cwrap"
-                          LINK_FLAGS "-s USE_BOOST_HEADERS=1 -s EXPORTED_RUNTIME_METHODS=ccall,cwrap")
+                          COMPILE_FLAGS "-s USE_BOOST_HEADERS=1 --memoryprofiler"
+                          LINK_FLAGS "-s USE_BOOST_HEADERS=1  --memoryprofiler -s EXPORTED_FUNCTIONS=_free,_generate_voter_keypair,_init_election,_generate_vote -s EXPORTED_RUNTIME_METHODS=ccall,cwrap -s LLD_REPORT_UNDEFINED -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
+                          LINK_DIRECTORIES "${CMAKE_BINARY_DIR}/libs/boost/src/boost/stage/lib")
 
+    add_dependencies(${CURRENT_PROJECT_NAME} boost)
 endif()

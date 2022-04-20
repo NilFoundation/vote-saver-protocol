@@ -635,8 +635,21 @@ struct marshaling_policy {
                 nil::crypto3::marshalling::types::make_verification_key<elgamal_verification_key_type, endianness>));
     }
 
+    static elgamal_verification_key_type deserialize_vk_eid(const std::vector<std::utf8_t> &vk_eid_blob) {
+        return deserialize_obj<verification_key_marshaling_type, elgamal_verification_key_type>(
+            vk_eid_blob,
+            std::function(
+                nil::crypto3::marshalling::types::make_verification_key<elgamal_verification_key_type, endianness>));
+    }
+
     static elgamal_private_key_type read_sk_eid(const boost::program_options::variables_map &vm) {
         auto sk_eid_blob = read_obj(vm["secret-key-output"].as<std::string>() + ".bin");
+        return deserialize_obj<secret_key_marshaling_type, elgamal_private_key_type>(
+            sk_eid_blob,
+            std::function(nil::crypto3::marshalling::types::make_private_key<elgamal_private_key_type, endianness>));
+    }
+
+    static elgamal_private_key_type deserialize_sk_eid(const std::vector<std::utf8_t> &sk_eid_blob) {
         return deserialize_obj<secret_key_marshaling_type, elgamal_private_key_type>(
             sk_eid_blob,
             std::function(nil::crypto3::marshalling::types::make_private_key<elgamal_private_key_type, endianness>));
@@ -683,6 +696,15 @@ struct marshaling_policy {
                                typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type>(
             read_obj(vm["cipher-text-output"].as<std::string>() + std::to_string(proof_idx) + ".bin"),
             std::function(
+                nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_encrypted_primary_input<
+                    typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type, endianness>));
+    }
+    
+    static typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type
+        deserialize_ct(const std::vector<std::utf8_t> &blob) {
+        return deserialize_obj<ct_marshaling_type,
+                               typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type>(
+            blob, std::function(
                 nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_encrypted_primary_input<
                     typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type, endianness>));
     }
@@ -1471,6 +1493,40 @@ void generate_vote(std::size_t tree_depth, std::size_t voter_idx, std::size_t vo
         *pinput_buffer_out = blob_to_buffer(pinput_blob_out);
         *ct_buffer_out = blob_to_buffer(ct_blob_out);
         *sn_buffer_out = blob_to_buffer(sn_blob_out);
+}
+
+void tally_votes(std::size_t tree_depth,
+                 const buffer<char> *const sk_eid_buffer,
+                 const buffer<char> *const vk_eid_buffer,
+                 const buffer<char> *const pk_crs_buffer,
+                 const buffer<char> *const vk_crs_buffer,
+                 const buffer<buffer<char> *const> *const cts_super_buffer,
+                 buffer<char> *const dec_proof_buffer_out,
+                 buffer<char> *const voting_res_buffer_out,
+                 ) {
+    std::vector<std::utf8_t> sk_eid_blob = buffer_to_blob(sk_eid_buffer);
+    std::vector<std::utf8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
+    std::vector<std::utf8_t> pk_crs_blob = buffer_to_blob(pk_crs_buffer);
+    std::vector<std::utf8_t> vk_crs_blob = buffer_to_blob(vk_crs_buffer);
+    std::vector<std::vector<std::utf8_t>> cts_blobs = super_buffer_to_blobs(cts_super_buffer);
+    
+    auto sk_eid = marshaling_policy::deserialize_sk_eid(sk_eid_blob);
+    auto vk_eid = marshaling_policy::deserialize_vk_eid(vk_eid_blob);
+    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
+        marshaling_policy::deserialize_pk_crs(vm), marshaling_policy::deserialize_vk_crs(vm)};
+    std::size_t participants_number = 1 << tree_depth;
+    std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
+    cts.reserve(participants_number);
+    for (auto proof_idx = 0; proof_idx < participants_number; proof_idx++) {
+        cts[proof_idx] = marshaling_policy::deserialize_ct(cts_blobs[i]);
+    }
+
+    std::vector<std::uint8_t> dec_proof_blob;
+    std::vector<std::uint8_t> voting_res_blob;
+
+    process_encrypted_input_mode_tally_admin_phase(tree_depth, cts, sk_eid, vk_eid, gg_keypair, dec_proof_blob,
+                                                voting_res_blob);
+    
 }
 
 }

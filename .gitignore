@@ -2,6 +2,7 @@
 Doxyfile
 html/
 build/*
+build-wasm/*
 cli_build/*
 build-clang/*
 build-gcc/*

@@ -23,6 +23,7 @@
 #include <fstream>
 #include <string>
 #include <functional>
+#include<time.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
@@ -545,18 +546,47 @@ struct marshaling_policy {
 
     static std::vector<scalar_field_value_type> read_scalar_vector(const std::string &file_prefix) {
         auto filename = file_prefix + ".bin";
+        return deserialize_scalar_vector(read_obj(filename));
+    }
+
+    static std::vector<scalar_field_value_type> deserialize_scalar_vector(const std::vector<std::uint8_t> &blob) {
         return deserialize_obj<pinput_marshaling_type, std::vector<scalar_field_value_type>>(
-            read_obj(filename),
+            blob,
             std::function(nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_primary_input<
                           std::vector<scalar_field_value_type>, endianness>));
     }
 
     static std::vector<bool> read_bool_vector(const std::string &file_prefix) {
+        auto filename = file_prefix + ".bin";
+        return deserialize_bool_vector(read_obj(filename));
+    }
+
+    static std::vector<bool> deserialize_bool_vector(const std::vector<std::uint8_t> &blob) {
         std::vector<bool> result;
-        for (const auto &i : read_scalar_vector(file_prefix)) {
+        for (const auto &i : deserialize_scalar_vector(blob)) {
             result.emplace_back(i.data);
         }
         return result;
+    }
+
+    static std::vector<std::uint8_t> serialize_255_bit_array(const std::array<bool,255> &bit_array_255) {
+        std::array<bool,256> bit_array_256;
+        std::copy_n(bit_array_255.begin(), 255, bit_array_256.begin());
+        std::array<std::uint8_t, 32> octet_array;
+        nil::crypto3::detail::pack<stream_endian::big_octet_big_bit,stream_endian::big_octet_big_bit, 1,8>(
+            bit_array_256.begin(), bit_array_256.end(), octet_array.begin());
+        return std::vector<std::uint8_t>(octet_array.begin(), octet_array.end());
+    }
+
+    static std::array<bool,255> deserialize_255_bit_array(const std::vector<std::uint8_t> &blob) {
+        std::array<std::uint8_t, 32> octet_array;
+        std::copy_n(blob.begin(), 32, octet_array.begin());
+        std::array<bool,256> bit_array_256;
+        nil::crypto3::detail::pack<stream_endian::big_octet_big_bit,stream_endian::big_octet_big_bit, 8,1>(
+            octet_array.begin(), octet_array.end(), bit_array_256.begin());
+        std::array<bool,255> bit_array_255;
+        std::copy_n(bit_array_256.begin(), 255, bit_array_255.begin());
+        return bit_array_255;
     }
 
     static std::vector<std::vector<bool>> read_voters_public_keys(std::size_t tree_depth,
@@ -572,8 +602,26 @@ struct marshaling_policy {
         return result;
     }
 
+    
+    static std::vector<std::vector<bool>> deserialize_voters_public_keys(std::size_t tree_depth,
+                                                                    const std::vector<std::vector<std::uint8_t>> &blobs) {
+        std::size_t participants_number = 1 << tree_depth;
+        std::vector<std::vector<bool>> result;
+
+        for (auto i = 0; i < participants_number; i++) {
+            result.emplace_back(deserialize_bool_vector(blobs[i]));
+        }
+        return result;
+    }
+
     static elgamal_public_key_type read_pk_eid(const boost::program_options::variables_map &vm) {
         auto pk_eid_blob = read_obj(vm["public-key-output"].as<std::string>() + ".bin");
+        return deserialize_obj<public_key_marshaling_type, elgamal_public_key_type>(
+            pk_eid_blob,
+            std::function(nil::crypto3::marshalling::types::make_public_key<elgamal_public_key_type, endianness>));
+    }
+
+    static elgamal_public_key_type deserialize_pk_eid(const std::vector<std::uint8_t> &pk_eid_blob) {
         return deserialize_obj<public_key_marshaling_type, elgamal_public_key_type>(
             pk_eid_blob,
             std::function(nil::crypto3::marshalling::types::make_public_key<elgamal_public_key_type, endianness>));
@@ -587,8 +635,21 @@ struct marshaling_policy {
                 nil::crypto3::marshalling::types::make_verification_key<elgamal_verification_key_type, endianness>));
     }
 
+    static elgamal_verification_key_type deserialize_vk_eid(const std::vector<std::utf8_t> &vk_eid_blob) {
+        return deserialize_obj<verification_key_marshaling_type, elgamal_verification_key_type>(
+            vk_eid_blob,
+            std::function(
+                nil::crypto3::marshalling::types::make_verification_key<elgamal_verification_key_type, endianness>));
+    }
+
     static elgamal_private_key_type read_sk_eid(const boost::program_options::variables_map &vm) {
         auto sk_eid_blob = read_obj(vm["secret-key-output"].as<std::string>() + ".bin");
+        return deserialize_obj<secret_key_marshaling_type, elgamal_private_key_type>(
+            sk_eid_blob,
+            std::function(nil::crypto3::marshalling::types::make_private_key<elgamal_private_key_type, endianness>));
+    }
+
+    static elgamal_private_key_type deserialize_sk_eid(const std::vector<std::utf8_t> &sk_eid_blob) {
         return deserialize_obj<secret_key_marshaling_type, elgamal_private_key_type>(
             sk_eid_blob,
             std::function(nil::crypto3::marshalling::types::make_private_key<elgamal_private_key_type, endianness>));
@@ -601,8 +662,21 @@ struct marshaling_policy {
                                        verification_key_type, endianness>));
     }
 
+    static verification_key_type deserialize_vk_crs(const std::vector<std::uint8_t> &vk_crs_blob) {
+        return deserialize_obj<r1cs_verification_key_marshaling_type, verification_key_type>(
+            vk_crs_blob, std::function(nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_verification_key<
+                                       verification_key_type, endianness>));
+    }
+
     static proving_key_type read_pk_crs(const boost::program_options::variables_map &vm) {
         auto pk_crs_blob = read_obj(vm["r1cs-proving-key-output"].as<std::string>() + ".bin");
+        return deserialize_obj<r1cs_proving_key_marshalling_type, proving_key_type>(
+            pk_crs_blob,
+            std::function(
+                nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_proving_key<proving_key_type, endianness>));
+    }
+
+    static proving_key_type deserialize_pk_crs(const std::vector<std::uint8_t> &pk_crs_blob) {
         return deserialize_obj<r1cs_proving_key_marshalling_type, proving_key_type>(
             pk_crs_blob,
             std::function(
@@ -625,6 +699,15 @@ struct marshaling_policy {
                 nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_encrypted_primary_input<
                     typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type, endianness>));
     }
+    
+    static typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type
+        deserialize_ct(const std::vector<std::utf8_t> &blob) {
+        return deserialize_obj<ct_marshaling_type,
+                               typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type>(
+            blob, std::function(
+                nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_encrypted_primary_input<
+                    typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type, endianness>));
+    }
 
     static typename encrypted_input_policy::encryption_scheme_type::decipher_type::second_type
         read_decryption_proof(const boost::program_options::variables_map &vm) {
@@ -639,6 +722,7 @@ template<typename ValueType, std::size_t N>
 typename std::enable_if<std::is_unsigned<ValueType>::value, std::vector<std::array<ValueType, N>>>::type
     generate_random_data(std::size_t leaf_number) {
     std::vector<std::array<ValueType, N>> v;
+    std::srand(std::time(0));
     for (std::size_t i = 0; i < leaf_number; ++i) {
         std::array<ValueType, N> leaf {};
         std::generate(std::begin(leaf), std::end(leaf),
@@ -982,6 +1066,7 @@ void process_encrypted_input_mode_init_admin_phase(
 
     std::vector<bool> eid(eid_bits);
     std::vector<scalar_field_value_type> eid_field;
+    std::srand(std::time(0));
     std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
     std::cout << "Voting session (eid) is: ";
     for (auto i : eid) {
@@ -1043,7 +1128,7 @@ void process_encrypted_input_mode_init_admin_phase(
 }
 
 void process_encrypted_input_mode_vote_phase(
-    std::size_t tree_depth, std::size_t voter_idx, const std::vector<std::vector<bool>> &public_keys,
+    std::size_t tree_depth, std::size_t voter_idx, std::size_t vote, const std::vector<std::vector<bool>> &public_keys,
     const std::vector<typename marshaling_policy::scalar_field_value_type> &admin_rt_field,
     const std::vector<bool> &eid, const std::vector<bool> &sk,
     const typename marshaling_policy::elgamal_public_key_type &pk_eid,
@@ -1074,7 +1159,7 @@ void process_encrypted_input_mode_vote_phase(
     auto tree_pk_leaf = tree[proof_idx];
 
     std::vector<bool> m(encrypted_input_policy::msg_size, false);
-    m[std::rand() % m.size()] = true;
+    m[vote] = true;
     std::cout << "Voter " << proof_idx << " is willing to vote with the following ballot: { ";
     for (auto m_i : m) {
         std::cout << int(m_i);
@@ -1263,6 +1348,189 @@ bool process_encrypted_input_mode_tally_voter_phase(
     return dec_verification_ans;
 }
 
+template<typename T>
+struct buffer {
+    std::size_t size;
+    T* ptr;
+};
+
+buffer<char> blob_to_buffer(const std::vector<std::uint8_t> &blob) {
+    buffer<char> buff;
+    buff.size = blob.size();
+    buff.ptr = new char[buff.size];
+    std::copy(blob.begin(), blob.end(), buff.ptr);
+    return buff;
+}
+
+std::vector<std::uint8_t> buffer_to_blob(const buffer<char> *const buff) {
+    std::vector<std::uint8_t> res(buff->ptr, buff->ptr + buff->size);
+    return res;
+}
+
+std::vector<std::vector<std::uint8_t>> super_buffer_to_blobs(const buffer<buffer<char> *const> *const super_buff) {
+    std::vector<std::vector<std::uint8_t>> res;
+    res.reserve(super_buff->size);
+
+    for(std::size_t i=0; i < super_buff->size; ++i) {
+        res.push_back(buffer_to_blob(super_buff->ptr[i]));
+    }
+
+    return res;
+}
+
+extern "C" {
+void generate_voter_keypair(buffer<char> *const voter_pk_out, buffer<char> *const voter_sk_out) {
+    std::vector<std::uint8_t> voter_pk_blob;
+    std::vector<std::uint8_t> voter_sk_blob;
+
+    // voter index only matters for prints
+    process_encrypted_input_mode_init_voter_phase(0, voter_pk_blob, voter_sk_blob);
+
+    *voter_pk_out = blob_to_buffer(voter_pk_blob);
+    *voter_sk_out = blob_to_buffer(voter_sk_blob);
+}
+
+void init_election(std::size_t tree_depth, std::size_t eid_bits, 
+                    const buffer<buffer<char> *const> *const public_keys_super_buffer,
+                    buffer<char> *const r1cs_proving_key_out,
+                    buffer<char> *const r1cs_verification_key_out,
+                    buffer<char> *const public_key_out,
+                    buffer<char> *const secret_key_out,
+                    buffer<char> *const verification_key_out,
+                    buffer<char> *const eid_out,
+                    buffer<char> *const rt_out
+) {
+    std::vector<std::uint8_t> r1cs_proving_key_blob;
+    std::vector<std::uint8_t> r1cs_verification_key_blob;
+    std::vector<std::uint8_t> public_key_blob;
+    std::vector<std::uint8_t> secret_key_blob;
+    std::vector<std::uint8_t> verification_key_blob;
+    std::vector<std::uint8_t> eid_blob;
+    std::vector<std::uint8_t> rt_blob;
+
+   auto blobs = super_buffer_to_blobs(public_keys_super_buffer);
+    std::cout << "Finished conversion from buffer to blobs of public keys" <<std::endl;
+
+    auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
+    for(auto c : public_keys[0]) {
+        std::cout << c;
+    }
+    std::cout << std::endl;
+    std::cout << "Finished deserialization of public keys"<<std::endl;
+     
+    process_encrypted_input_mode_init_admin_phase(tree_depth,
+        eid_bits, public_keys, r1cs_proving_key_blob,
+        r1cs_verification_key_blob, public_key_blob,
+        secret_key_blob, verification_key_blob,
+        eid_blob, rt_blob);
+    
+    *r1cs_proving_key_out = blob_to_buffer(r1cs_proving_key_blob);
+    *r1cs_verification_key_out = blob_to_buffer(r1cs_verification_key_blob);
+    *public_key_out = blob_to_buffer(public_key_blob);
+    *secret_key_out = blob_to_buffer(secret_key_blob);
+    *verification_key_out = blob_to_buffer(verification_key_blob);
+    *eid_out = blob_to_buffer(eid_blob);
+    *rt_out = blob_to_buffer(rt_blob);
+}
+
+void generate_vote(std::size_t tree_depth, std::size_t voter_idx, std::size_t vote,
+          const buffer<buffer<char> *const> *const public_keys_super_buffer,
+          const buffer<char> *const rt_buffer,
+          const buffer<char> *const eid_buffer,
+          const buffer<char> *const sk_buffer,
+          const buffer<char> *const pk_eid_buffer,
+          const buffer<char> *const r1cs_proving_key_buffer,
+          const buffer<char> *const r1cs_verification_key_buffer,
+          buffer<char> *const proof_buffer_out,
+          buffer<char> *const pinput_buffer_out,
+          buffer<char> *const ct_buffer_out,
+          buffer<char> *const sn_buffer_out
+        ) {
+        
+        std::vector<std::uint8_t> proof_blob_out;
+        std::vector<std::uint8_t> pinput_blob_out;
+        std::vector<std::uint8_t> ct_blob_out;
+        std::vector<std::uint8_t> eid_blob_out;
+        std::vector<std::uint8_t> sn_blob_out;
+        std::vector<std::uint8_t> rt_blob_out;
+        std::vector<std::uint8_t> vk_crs_blob_out;
+        std::vector<std::uint8_t> pk_eid_blob_out;
+
+        auto blobs = super_buffer_to_blobs(public_keys_super_buffer);
+        std::cout << "Finished conversion from buffer to blobs of public keys" <<std::endl;
+
+        auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
+        std::cout << "Finished deserialization of public keys"<<std::endl;
+
+        
+        auto rt_blob = buffer_to_blob(rt_buffer);
+        auto eid_blob = buffer_to_blob(eid_buffer);
+        auto sk_blob = buffer_to_blob(sk_buffer);
+        auto pk_eid_blob = buffer_to_blob(pk_eid_buffer);
+        auto proving_key_blob = buffer_to_blob(r1cs_proving_key_buffer);
+        auto verification_key_blob = buffer_to_blob(r1cs_verification_key_buffer);
+
+        std::cout << "Finished conversion of rt,eid,sk,pk_eid,proving_key,verification_key from buffer to blob" <<std::endl;
+
+        auto rt = marshaling_policy::deserialize_scalar_vector(rt_blob);
+        auto eid = marshaling_policy::deserialize_bool_vector(eid_blob);
+        auto sk = marshaling_policy::deserialize_bool_vector(sk_blob);
+        auto pk_eid = marshaling_policy::deserialize_pk_eid(pk_eid_blob);
+
+        typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
+            marshaling_policy::deserialize_pk_crs(proving_key_blob),
+            marshaling_policy::deserialize_vk_crs(verification_key_blob)
+        };
+
+        std::cout << "Finished deserialization of rt,eid,sk,pk_eid,proving_key,verification_key" <<std::endl;
+
+
+        process_encrypted_input_mode_vote_phase(tree_depth, voter_idx, vote, public_keys, rt, eid, sk, pk_eid,
+                                            gg_keypair, proof_blob_out, pinput_blob_out, ct_blob_out, eid_blob_out, sn_blob_out,
+                                            rt_blob_out, vk_crs_blob_out, pk_eid_blob_out);
+        
+        *proof_buffer_out = blob_to_buffer(proof_blob_out);
+        *pinput_buffer_out = blob_to_buffer(pinput_blob_out);
+        *ct_buffer_out = blob_to_buffer(ct_blob_out);
+        *sn_buffer_out = blob_to_buffer(sn_blob_out);
+}
+
+void tally_votes(std::size_t tree_depth,
+                 const buffer<char> *const sk_eid_buffer,
+                 const buffer<char> *const vk_eid_buffer,
+                 const buffer<char> *const pk_crs_buffer,
+                 const buffer<char> *const vk_crs_buffer,
+                 const buffer<buffer<char> *const> *const cts_super_buffer,
+                 buffer<char> *const dec_proof_buffer_out,
+                 buffer<char> *const voting_res_buffer_out,
+                 ) {
+    std::vector<std::utf8_t> sk_eid_blob = buffer_to_blob(sk_eid_buffer);
+    std::vector<std::utf8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
+    std::vector<std::utf8_t> pk_crs_blob = buffer_to_blob(pk_crs_buffer);
+    std::vector<std::utf8_t> vk_crs_blob = buffer_to_blob(vk_crs_buffer);
+    std::vector<std::vector<std::utf8_t>> cts_blobs = super_buffer_to_blobs(cts_super_buffer);
+    
+    auto sk_eid = marshaling_policy::deserialize_sk_eid(sk_eid_blob);
+    auto vk_eid = marshaling_policy::deserialize_vk_eid(vk_eid_blob);
+    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
+        marshaling_policy::deserialize_pk_crs(vm), marshaling_policy::deserialize_vk_crs(vm)};
+    std::size_t participants_number = 1 << tree_depth;
+    std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
+    cts.reserve(participants_number);
+    for (auto proof_idx = 0; proof_idx < participants_number; proof_idx++) {
+        cts[proof_idx] = marshaling_policy::deserialize_ct(cts_blobs[i]);
+    }
+
+    std::vector<std::uint8_t> dec_proof_blob;
+    std::vector<std::uint8_t> voting_res_blob;
+
+    process_encrypted_input_mode_tally_admin_phase(tree_depth, cts, sk_eid, vk_eid, gg_keypair, dec_proof_blob,
+                                                voting_res_blob);
+    
+}
+
+}
+
 int main(int argc, char *argv[]) {
     std::srand(std::time(0));
 
@@ -1354,11 +1622,11 @@ int main(int argc, char *argv[]) {
                 marshaling_policy::write_obj(std::filesystem::path(filename), {r1cs_proving_key_out});
             }
             if (vm.count("r1cs-verification-key-output")) {
-                auto filename = vm["public-key-output"].as<std::string>() + ".bin";
+                auto filename = vm["r1cs-verification-key-output"].as<std::string>() + ".bin";
                 marshaling_policy::write_obj(std::filesystem::path(filename), {r1cs_verification_key_out});
             }
             if (vm.count("public-key-output")) {
-                auto filename = vm["verification-key-output"].as<std::string>() + ".bin";
+                auto filename = vm["public-key-output"].as<std::string>() + ".bin";
                 marshaling_policy::write_obj(std::filesystem::path(filename), {public_key_output});
             }
             if (vm.count("secret-key-output")) {
@@ -1374,7 +1642,7 @@ int main(int argc, char *argv[]) {
                 marshaling_policy::write_obj(std::filesystem::path(filename), {eid_output});
             }
             if (vm.count("rt-output")) {
-                auto filename = vm["-output"].as<std::string>() + ".bin";
+                auto filename = vm["rt-output"].as<std::string>() + ".bin";
                 marshaling_policy::write_obj(std::filesystem::path(filename), {rt_output});
             }
 

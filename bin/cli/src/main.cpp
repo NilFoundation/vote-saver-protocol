@@ -1529,6 +1529,7 @@ int main(int argc, char *argv[]) {
     ("version,v", "Display version.")
     ("phase,p", boost::program_options::value<std::string>(),"Execute protocol phase, allowed values:\n\t - init_voter (generate and write voters public and secret keys),\n\t - init_admin (generate and write CRS and ElGamal keys),\n\t - vote (read CRS and ElGamal keys, encrypt ballot and generate proof, then write them),\n\t - vote_verify (read voters' proofs and encrypted ballots and verify them),\n\t - tally_admin (read voters' encrypted ballots, aggregate encrypted ballots, decrypt aggregated ballot and generate decryption proof and write them),\n\t - tally_voter (read ElGamal verification and public keys, encrypted ballots, decrypted aggregated ballot, decryption proof and verify them).")
     ("voter-idx,vidx", boost::program_options::value<std::size_t>()->default_value(0),"Voter index")
+    ("vote", boost::program_options::value<std::size_t>()->default_value(0),"Vote")
     ("voter-public-key-output,vpko", boost::program_options::value<std::string>()->default_value("voter_public_key"),"Voter public key")
     ("voter-secret-key-output,vsko", boost::program_options::value<std::string>()->default_value("voter_secret_key"),"Voter secret key")
     ("r1cs-proof-output,rpo", boost::program_options::value<std::string>()->default_value("r1cs_proof"), "Proof output path.")
@@ -1640,6 +1641,7 @@ int main(int argc, char *argv[]) {
             std::vector<std::uint8_t> pk_eid_blob;
 
             auto tree_depth = vm["tree-depth"].as<std::size_t>();
+            auto vote = vm["vote"].as<std::size_t>();
             auto proof_idx = vm["voter-idx"].as<std::size_t>();
             auto public_keys = marshaling_policy::read_voters_public_keys(
                 tree_depth, vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "");
@@ -1654,9 +1656,9 @@ int main(int argc, char *argv[]) {
             typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
                 marshaling_policy::read_pk_crs(vm), marshaling_policy::read_vk_crs(vm)};
 
-            process_encrypted_input_mode_vote_phase(tree_depth, proof_idx, public_keys, admin_rt_field, eid, sk, pk_eid,
-                                                    gg_keypair, proof_blob, pinput_blob, ct_blob, eid_blob, sn_blob,
-                                                    rt_blob, vk_crs_blob, pk_eid_blob);
+            process_encrypted_input_mode_vote_phase(tree_depth, proof_idx, vote, public_keys, admin_rt_field, eid, sk,
+                                                    pk_eid, gg_keypair, proof_blob, pinput_blob, ct_blob, eid_blob,
+                                                    sn_blob, rt_blob, vk_crs_blob, pk_eid_blob);
             if (vm.count("r1cs-proof-output")) {
                 auto filename = vm["r1cs-proof-output"].as<std::string>() + std::to_string(proof_idx) + ".bin";
                 marshaling_policy::write_obj(std::filesystem::path(filename), {proof_blob});

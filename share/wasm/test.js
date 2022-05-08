@@ -12,8 +12,10 @@ function test() {
         public_keys.push(keypair.public_key);
     }
     election = wrapper.init_election(tree_depth, public_keys);
-    vote_data = wrapper.generate_vote(tree_depth, 0, 1, public_keys,
-        election.rt, election.eid, keypairs[0].secret_key,
+    voter_idx = 3;
+    vote = 5;
+    vote_data = wrapper.generate_vote(tree_depth, voter_idx, vote, public_keys,
+        election.rt, election.eid, keypairs[voter_idx].secret_key,
         election.public_key, election.r1cs_proving_key, election.r1cs_verification_key);
     console.log(vote_data)
 }

@@ -1416,10 +1416,7 @@ void init_election(std::size_t tree_depth, std::size_t eid_bits,
     std::cout << "Finished conversion from buffer to blobs of public keys" << std::endl;
 
     auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
-    for (auto c : public_keys[0]) {
-        std::cout << c;
-    }
-    std::cout << std::endl;
+
     std::cout << "Finished deserialization of public keys" << std::endl;
 
     process_encrypted_input_mode_init_admin_phase(tree_depth, eid_bits, public_keys, r1cs_proving_key_blob,

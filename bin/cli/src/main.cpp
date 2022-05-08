@@ -156,7 +156,7 @@ struct encrypted_input_policy {
     using merkle_proof_component = typename voting_component::merkle_proof_component;
     using encryption_scheme_type = elgamal_verifiable<pairing_curve_type>;
     using proof_system = typename encryption_scheme_type::proof_system_type;
-    static constexpr std::size_t msg_size = 7;
+    static constexpr std::size_t msg_size = 25;
     static constexpr std::size_t secret_key_bits = hash_type::digest_bits;
     static constexpr std::size_t public_key_bits = secret_key_bits;
 };

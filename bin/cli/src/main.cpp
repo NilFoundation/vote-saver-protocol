@@ -156,7 +156,7 @@ struct encrypted_input_policy {
     using merkle_proof_component = typename voting_component::merkle_proof_component;
     using encryption_scheme_type = elgamal_verifiable<pairing_curve_type>;
     using proof_system = typename encryption_scheme_type::proof_system_type;
-    static constexpr std::size_t msg_size = 7;
+    static constexpr std::size_t msg_size = 25;
     static constexpr std::size_t secret_key_bits = hash_type::digest_bits;
     static constexpr std::size_t public_key_bits = secret_key_bits;
 };
@@ -605,6 +605,7 @@ struct marshaling_policy {
     static std::vector<std::vector<bool>>
         deserialize_voters_public_keys(std::size_t tree_depth, const std::vector<std::vector<std::uint8_t>> &blobs) {
         std::size_t participants_number = 1 << tree_depth;
+        BOOST_ASSERT(blobs.size() == participants_number);
         std::vector<std::vector<bool>> result;
 
         for (auto i = 0; i < participants_number; i++) {
@@ -718,11 +719,20 @@ struct marshaling_policy {
     }
 };
 
+bool did_srand = false;
+
+void srand_once() {
+    if(!did_srand) {
+        did_srand = true;
+        std::srand(std::time(0));
+    }
+}
+
 template<typename ValueType, std::size_t N>
 typename std::enable_if<std::is_unsigned<ValueType>::value, std::vector<std::array<ValueType, N>>>::type
     generate_random_data(std::size_t leaf_number) {
     std::vector<std::array<ValueType, N>> v;
-    std::srand(std::time(0));
+    srand_once();
     for (std::size_t i = 0; i < leaf_number; ++i) {
         std::array<ValueType, N> leaf {};
         std::generate(std::begin(leaf), std::end(leaf),
@@ -1066,7 +1076,7 @@ void process_encrypted_input_mode_init_admin_phase(
 
     std::vector<bool> eid(eid_bits);
     std::vector<scalar_field_value_type> eid_field;
-    std::srand(std::time(0));
+    srand_once();
     std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
     std::cout << "Voting session (eid) is: ";
     for (auto i : eid) {
@@ -1407,10 +1417,7 @@ void init_election(std::size_t tree_depth, std::size_t eid_bits,
     std::cout << "Finished conversion from buffer to blobs of public keys" << std::endl;
 
     auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
-    for (auto c : public_keys[0]) {
-        std::cout << c;
-    }
-    std::cout << std::endl;
+
     std::cout << "Finished deserialization of public keys" << std::endl;
 
     process_encrypted_input_mode_init_admin_phase(tree_depth, eid_bits, public_keys, r1cs_proving_key_blob,
@@ -1500,6 +1507,7 @@ void tally_votes(std::size_t tree_depth,
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
         marshaling_policy::deserialize_pk_crs(pk_crs_blob), marshaling_policy::deserialize_vk_crs(vk_crs_blob)};
     std::size_t participants_number = 1 << tree_depth;
+    BOOST_ASSERT(cts_blobs.size() == participants_number);
     std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
     cts.reserve(participants_number);
     for (auto proof_idx = 0; proof_idx < participants_number; proof_idx++) {
@@ -1515,11 +1523,10 @@ void tally_votes(std::size_t tree_depth,
 }
 
 int main(int argc, char *argv[]) {
-    std::srand(std::time(0));
-
 #if __EMSCRIPTEN__
 
 #else
+    srand_once();
     boost::program_options::options_description desc(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
         "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator.");

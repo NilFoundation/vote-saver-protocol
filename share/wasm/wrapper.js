@@ -30,9 +30,9 @@ function Uint8ArrayArrayToSuperBufferPtr(blobs) {
     cli.HEAPU32.subarray(ptr_i32, ptr_i32+size).set(buffers);
     
     super_buff_ptr = cli._malloc(8);
-    super_buff_ptri32 = buff_ptr >> 2;
-    cli.HEAPU32.subarray(buff_ptri32, buff_ptri32+2).set([size, ptr]);
-    return buff_ptr;
+    super_buff_ptri32 = super_buff_ptr >> 2;
+    cli.HEAPU32.subarray(super_buff_ptri32, super_buff_ptri32+2).set([size, ptr]);
+    return super_buff_ptr;
 }
 
 /**

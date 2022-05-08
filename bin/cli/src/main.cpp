@@ -718,11 +718,20 @@ struct marshaling_policy {
     }
 };
 
+bool did_srand = false;
+
+void srand_once() {
+    if(!did_srand) {
+        did_srand = true;
+        std::srand(std::time(0));
+    }
+}
+
 template<typename ValueType, std::size_t N>
 typename std::enable_if<std::is_unsigned<ValueType>::value, std::vector<std::array<ValueType, N>>>::type
     generate_random_data(std::size_t leaf_number) {
     std::vector<std::array<ValueType, N>> v;
-    std::srand(std::time(0));
+    srand_once();
     for (std::size_t i = 0; i < leaf_number; ++i) {
         std::array<ValueType, N> leaf {};
         std::generate(std::begin(leaf), std::end(leaf),
@@ -1066,7 +1075,7 @@ void process_encrypted_input_mode_init_admin_phase(
 
     std::vector<bool> eid(eid_bits);
     std::vector<scalar_field_value_type> eid_field;
-    std::srand(std::time(0));
+    srand_once();
     std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
     std::cout << "Voting session (eid) is: ";
     for (auto i : eid) {
@@ -1515,11 +1524,10 @@ void tally_votes(std::size_t tree_depth,
 }
 
 int main(int argc, char *argv[]) {
-    std::srand(std::time(0));
-
 #if __EMSCRIPTEN__
 
 #else
+    srand_once();
     boost::program_options::options_description desc(
         "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
         "(https://eprint.iacr.org/2016/260.pdf) CLI Proof Generator.");

@@ -605,6 +605,7 @@ struct marshaling_policy {
     static std::vector<std::vector<bool>>
         deserialize_voters_public_keys(std::size_t tree_depth, const std::vector<std::vector<std::uint8_t>> &blobs) {
         std::size_t participants_number = 1 << tree_depth;
+        BOOST_ASSERT(blobs.size() == participants_number);
         std::vector<std::vector<bool>> result;
 
         for (auto i = 0; i < participants_number; i++) {
@@ -1506,6 +1507,7 @@ void tally_votes(std::size_t tree_depth,
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
         marshaling_policy::deserialize_pk_crs(pk_crs_blob), marshaling_policy::deserialize_vk_crs(vk_crs_blob)};
     std::size_t participants_number = 1 << tree_depth;
+    BOOST_ASSERT(cts_blobs.size() == participants_number);
     std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
     cts.reserve(participants_number);
     for (auto proof_idx = 0; proof_idx < participants_number; proof_idx++) {

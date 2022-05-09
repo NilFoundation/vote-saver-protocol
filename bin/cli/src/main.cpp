@@ -605,12 +605,19 @@ struct marshaling_policy {
     static std::vector<std::vector<bool>>
         deserialize_voters_public_keys(std::size_t tree_depth, const std::vector<std::vector<std::uint8_t>> &blobs) {
         std::size_t participants_number = 1 << tree_depth;
-        BOOST_ASSERT(blobs.size() == participants_number);
+        BOOST_ASSERT(blobs.size() <= participants_number);
         std::vector<std::vector<bool>> result;
 
-        for (auto i = 0; i < participants_number; i++) {
+        for (auto i = 0; i < blobs.size(); i++) {
             result.emplace_back(deserialize_bool_vector(blobs[i]));
         }
+
+        for (auto i = blobs.size(); i < participants_number; i++) {
+            result.emplace_back(
+                std::vector<bool>(encrypted_input_policy::hash_type::digest_bits, 0)
+            );
+        }
+
         return result;
     }
 
@@ -1341,7 +1348,7 @@ bool process_encrypted_input_mode_tally_voter_phase(
     std::size_t participants_number = 1 << tree_depth;
 
     auto ct_agg = cts[0];
-    for (auto proof_idx = 1; proof_idx < participants_number; proof_idx++) {
+    for (auto proof_idx = 1; proof_idx < cts.size(); proof_idx++) {
         auto ct_i = cts[proof_idx];
         BOOST_ASSERT_MSG(std::size(ct_agg) == std::size(ct_i), "Wrong size of the ct!");
         for (std::size_t i = 0; i < std::size(ct_i); ++i) {
@@ -1522,7 +1529,7 @@ void tally_votes(std::size_t tree_depth,
     BOOST_ASSERT(cts_blobs.size() <= participants_number);
     std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
     cts.reserve(cts_blobs.size());
-    for (auto proof_idx = 0; proof_idx < participants_number; proof_idx++) {
+    for (auto proof_idx = 0; proof_idx < cts_blobs.size(); proof_idx++) {
         cts.push_back(marshaling_policy::deserialize_ct(cts_blobs[proof_idx]));
     }
 
@@ -1572,7 +1579,7 @@ bool verify_tally(std::size_t tree_depth,
     BOOST_ASSERT(cts_blobs.size() <= participants_number);
     std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
     cts.reserve(cts_blobs.size());
-    for (auto proof_idx = 0; proof_idx < participants_number; proof_idx++) {
+    for (auto proof_idx = 0; proof_idx < cts_blobs.size(); proof_idx++) {
         cts.push_back(marshaling_policy::deserialize_ct(cts_blobs[proof_idx]));
     }
 

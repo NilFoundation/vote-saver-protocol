@@ -1,9 +1,9 @@
 const wrapper = require("./wrapper.js");
 
 function test() {
-    tree_depth = 2;
+    tree_depth = 3;
     eid = 1;
-    num_participants = 1 << tree_depth;
+    num_participants = 5;
     keypairs = [];
     public_keys = [];
     for(var i =0; i < num_participants; ++i) {

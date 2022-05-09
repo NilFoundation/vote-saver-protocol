@@ -1,4 +1,4 @@
-const cli = require("./cli.js")
+const cli = require("../../build-wasm/bin/cli/cli")
 
 /**
  * 
@@ -244,3 +244,109 @@ exports.generate_vote = function (tree_depth, voter_index, vote, public_keys,
     }
 }
 
+/**
+ * @typedef TallyData
+ * 
+ * @property {Uint8Array} dec_proof
+ * @property {Uint8Array} voting_res Voting results are returned as a byteblob,
+ * the first 4 bytes are size, the number options (currently configured to 25),
+ * the rest the number of votes for each of the options, each takes 32 bytes.
+ * Overall 4 + 25*32 = 804 bytes.
+ * All numbers are big-endian.
+ */
+
+/**
+ * 
+ * @param {number} tree_depth 
+ * @param {Uint8Array} sk_eid 
+ * @param {Uint8Array} vk_eid 
+ * @param {Uint8Array} pk_crs 
+ * @param {Uint8Array} vk_crs 
+ * @param {Uint8Array[]} cts 
+ * 
+ * @returns {TallyData}
+ */
+exports.tally_votes = function(tree_depth, sk_eid, vk_eid, pk_crs, vk_crs, cts) {
+    sk_eid_buffer = Uint8ArrayToBufferPtr(sk_eid);
+    vk_eid_buffer = Uint8ArrayToBufferPtr(vk_eid);
+    pk_crs_buffer = Uint8ArrayToBufferPtr(pk_crs);
+    vk_crs_buffer = Uint8ArrayToBufferPtr(vk_crs);
+    cts_super_buffer = Uint8ArrayArrayToSuperBufferPtr(cts);
+    
+    dec_proof_buffer_out = cli._malloc(8);
+    voting_res_buffer_out = cli._malloc(8);
+
+    cli._tally_votes(tree_depth, sk_eid_buffer, vk_eid_buffer,
+        pk_crs_buffer, vk_crs_buffer, cts_super_buffer, dec_proof_buffer_out,
+        voting_res_buffer_out);
+
+    dec_proof_blob = BufferPtrToUint8ArrayAndFree(dec_proof_buffer_out);
+    voting_res_blob = BufferPtrToUint8ArrayAndFree(voting_res_buffer_out);
+
+    freeBuffer(sk_eid_buffer);
+    cli._free(sk_eid_buffer);
+    
+    freeBuffer(vk_eid_buffer);
+    cli._free(vk_eid_buffer);
+        
+    freeBuffer(pk_crs_buffer);
+    cli._free(pk_crs_buffer);
+    
+    freeBuffer(vk_crs_buffer);
+    cli._free(vk_crs_buffer);
+    
+    freeSuperBuffer(cts_super_buffer);
+    cli._free(cts_super_buffer);
+    
+    return {
+        dec_proof: dec_proof_blob,
+        voting_res: voting_res_blob
+    };
+}
+
+/**
+ * 
+ * @param {number} tree_depth 
+ * @param {Uint8Array[]} cts 
+ * @param {Uint8Array} vk_eid 
+ * @param {Uint8Array} pk_crs 
+ * @param {Uint8Array} vk_crs 
+ * @param {Uint8Array} dec_proof 
+ * @param {Uint8Array} voting_res 
+ * 
+ * @returns {bool}
+ */
+exports.verify_tally = function(tree_depth, cts, vk_eid, pk_crs, vk_crs,
+                     dec_proof, voting_res) {
+    vk_eid_buffer = Uint8ArrayToBufferPtr(vk_eid);
+    pk_crs_buffer = Uint8ArrayToBufferPtr(pk_crs);
+    vk_crs_buffer = Uint8ArrayToBufferPtr(vk_crs);
+    cts_super_buffer = Uint8ArrayArrayToSuperBufferPtr(cts);
+    
+    dec_proof_buffer = Uint8ArrayToBufferPtr(dec_proof);
+    voting_res_buffer = Uint8ArrayToBufferPtr(voting_res);
+
+    let is_tally_valid = cli._verify_tally(tree_depth, cts_super_buffer,
+        vk_eid_buffer, pk_crs_buffer, vk_crs_buffer, dec_proof_buffer,
+        voting_res_buffer);
+    
+    freeBuffer(vk_eid_buffer);
+    cli._free(vk_eid_buffer);
+        
+    freeBuffer(pk_crs_buffer);
+    cli._free(pk_crs_buffer);
+    
+    freeBuffer(vk_crs_buffer);
+    cli._free(vk_crs_buffer);
+
+    freeBuffer(dec_proof_buffer);
+    cli._free(dec_proof_buffer);
+    
+    freeBuffer(voting_res_buffer);
+    cli._free(voting_res_buffer);
+    
+    freeSuperBuffer(cts_super_buffer);
+    cli._free(cts_super_buffer);
+
+    return is_tally_valid;
+}

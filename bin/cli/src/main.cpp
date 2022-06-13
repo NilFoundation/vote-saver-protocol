@@ -23,7 +23,7 @@
 #include <fstream>
 #include <string>
 #include <functional>
-#include <time.h>
+#include <ctime>
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>

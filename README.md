@@ -49,7 +49,7 @@ decryption, anyone can be convinced that the result is tallied correctly (univer
 
 ## Requirements
 
-* Boost 1.76.
+* Boost 1.76 - 1.78.
 
 ## Building
 

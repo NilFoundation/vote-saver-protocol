@@ -258,5 +258,5 @@ Result: {
 
 Current performance measurements are as follows from this document: https://docs.google.com/spreadsheets/d/1jTXVvuSODCmmbvz9EeuYBPC-GmNFt8E-40XrCaZiElY/htmlview 
 
-1. More efficient packing of a SeqNo along with a vote-maintaining field can help to reduce the size of a user's proving/verifying key. (https://github.com/NilFoundation/crypto3-blueprint/blob/fc053b0a5f35c6878257caaa29495e375ba1675e/include/nil/crypto3/zk/components/voting/encrypted_input_voting.hpp#L48-L60).
+1. More efficient packing of a SeqNo along with a vote-maintaining field can help to reduce the size of a user's proving/verifying key. (https://github.com/NilFoundation/crypto3-blueprint/blob/fc053b0a5f35c6878257caaa29495e375ba1675e/include/nil/crypto3/zk/components/voting/encrypted_input_voting.hpp#L48-L60, https://github.com/NilFoundation/vote-saver-protocol/blob/master/bin/cli/src/main.cpp#L267, https://github.com/NilFoundation/vote-saver-protocol/blob/master/bin/cli/src/main.cpp#L281).
 2. Groth16 proof generator performance itself can be improved within some parallelization and optimizations in here: https://github.com/NilFoundation/crypto3-zk/blob/5453fe166eed154a81381b8eefe30e40db172c4e/include/nil/crypto3/zk/snark/systems/ppzksnark/r1cs_gg_ppzksnark/prover.hpp#L73 

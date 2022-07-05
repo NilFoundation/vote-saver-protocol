@@ -80,11 +80,13 @@ contract SaverAdmin is IAdmin {
         m_session_state.rt = rt;
     }
 
-    function add_voter(address voter) public checkOwnerAndAccept checkVotingSessionIsNotInitialized {
-        m_session_state.voters_addresses.push(voter);
-        m_session_state.voters_number++;
+    function add_voters(address[] voters_addresses) public checkOwnerAndAccept checkVotingSessionIsNotInitialized {
+        for (uint i = 0; i < voters_addresses.length; i++) {
+            m_session_state.voters_addresses.push(voters_addresses[i]);
+            m_session_state.voter_map_accepted.add(voters_addresses[i], false);
+        }
 
-        m_session_state.voter_map_accepted[voter] = false;
+        m_session_state.voters_number += voters_addresses.length;
     }
 
     // ============================================

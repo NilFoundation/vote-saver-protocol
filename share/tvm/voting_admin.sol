@@ -10,6 +10,11 @@ contract SaverAdmin is IAdmin {
         reset_voter_msg_accepted();
     }
 
+    modifier checkVotingSessionIsNotInitialized() {
+        require(!m_is_session_initialized, 105);
+        _;
+    }
+
     modifier checkOwnerAndAccept {
         require(msg.pubkey() == tvm.pubkey(), 103);
         tvm.accept();
@@ -59,28 +64,39 @@ contract SaverAdmin is IAdmin {
         m_all_eid = m2;
         m_all_sn = m3;
     }
+
+    function set_eid(
+        bytes eid, bytes pk_eid, bytes vk_eid
+    ) public checkOwnerAndAccept checkVotingSessionIsNotInitialized {
+        // voting session with such eid was initialized already
+        require(m_all_eid.add(eid, null), 107);
+
+        m_eid = eid;
+        m_session_state.pk_eid = pk_eid;
+        m_session_state.vk_eid = vk_eid;
+    }
+
+    function set_rt(bytes rt) public checkOwnerAndAccept checkVotingSessionIsNotInitialized {
+        m_session_state.rt = rt;
+    }
+
+    function add_voter(address voter) public checkOwnerAndAccept checkVotingSessionIsNotInitialized {
+        m_session_state.voters_addresses.push(voter);
+        m_session_state.voters_number++;
+
+        m_session_state.voter_map_accepted[voter] = false;
+    }
+
     // ============================================
 
     // ============================================
     // Initialization of the new voting session
     // ============================================
-    function init_voting_session(bytes eid, bytes pk_eid, bytes vk_eid, address[] voters_addresses, bytes rt) public checkOwnerAndAccept {
-        require(voters_addresses.length > 0, 106);
-        // voting session with such eid was initialized already
-        require(m_all_eid.add(eid, null), 107);
+    function init_voting_session() public checkOwnerAndAccept checkVotingSessionIsNotInitialized {
+        require(m_session_state.voters_addresses.length > 0, 106);
 
-        m_eid = eid;
-        SharedStructs.SessionState session_init_state;
-        session_init_state.pk_eid = pk_eid;
-        session_init_state.vk_eid = vk_eid;
-        session_init_state.rt = rt;
-        session_init_state.voters_addresses = voters_addresses;
-        for (uint i = 0; i < voters_addresses.length; i++) {
-            session_init_state.voter_map_accepted.add(voters_addresses[i], false);
-        }
-        session_init_state.voters_number = voters_addresses.length;
-        m_session_state = session_init_state;
         m_is_tally_committed = false;
+        m_is_session_initialized = true;
     }
     // ============================================
 
@@ -249,4 +265,5 @@ contract SaverAdmin is IAdmin {
     mapping(bytes => optional(bool))  m_all_sn;
     uint32 m_voter_msg_accepted;
     bool m_is_tally_committed;
+    bool m_is_session_initialized;
 }

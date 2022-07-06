@@ -70,6 +70,8 @@
 
 #include <nil/crypto3/random/algebraic_random_device.hpp>
 
+#include <nil/crypto3/detail/pack.hpp>
+
 using namespace nil::crypto3;
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::pubkey;
@@ -264,18 +266,12 @@ struct marshaling_policy {
         }
     }
 
-    static void serialize_initial_phase_voter_data(const std::vector<scalar_field_value_type> &voter_pubkey,
-                                                   const std::vector<scalar_field_value_type> &voter_skey,
+    static void serialize_initial_phase_voter_data(const std::array<bool, encrypted_input_policy::hash_type::digest_bits> &voter_pubkey,
+                                                   const std::array<bool, encrypted_input_policy::hash_type::digest_bits> &voter_skey,
                                                    std::vector<std::uint8_t> &voter_pk_out,
-                                                   std::vector<std::uint8_t> &voter_sk_out) {
-        voter_pk_out = serialize_obj<pinput_marshaling_type>(
-            voter_pubkey,
-            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
-                                                                                                 endianness>));
-        voter_sk_out = serialize_obj<pinput_marshaling_type>(
-            voter_skey,
-            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
-                                                                                                 endianness>));
+                                                   std::vector<std::uint8_t> &voter_sk_out) {                                                                        endianness>));
+        voter_pk_out = serialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(voter_pubkey);
+        voter_sk_out = serialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(voter_skey);
     }
 
     static void write_initial_phase_admin_data(
@@ -569,52 +565,70 @@ struct marshaling_policy {
         return result;
     }
 
-    static std::vector<std::uint8_t> serialize_255_bit_array(const std::array<bool, 255> &bit_array_255) {
-        std::array<bool, 256> bit_array_256;
-        std::copy_n(bit_array_255.begin(), 255, bit_array_256.begin());
-        std::array<std::uint8_t, 32> octet_array;
-        nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::big_octet_big_bit, 1, 8>(
-            bit_array_256.begin(), bit_array_256.end(), octet_array.begin());
-        return std::vector<std::uint8_t>(octet_array.begin(), octet_array.end());
+    template<int bits>
+    static std::vector<std::uint8_t> serialize_bitarray(const std::array<bool, bits> &bitarray) {
+
+        constexpr int octets = bits/8 + (bits%8 ? 1 : 0);
+        constexpr int bits_ceil = octets*8;
+        
+        std::array<std::uint8_t, bits_ceil> in {};
+        std::copy_n(bitarray.begin(), bits, in.begin());
+        
+        std::array<std::uint8_t, octets> out {};
+        nil::crypto3::detail::pack<nil::crypto3::stream_endian::big_octet_big_bit, nil::crypto3::stream_endian::big_octet_big_bit, 1, 8>(in.begin(), in.end(), out.begin());
+        
+        std::vector<std::uint8_t> res;
+        std::copy(out.begin(), out.end(), std::back_inserter(res));
+
+        return res;
     }
 
-    static std::array<bool, 255> deserialize_255_bit_array(const std::vector<std::uint8_t> &blob) {
-        std::array<std::uint8_t, 32> octet_array;
-        std::copy_n(blob.begin(), 32, octet_array.begin());
-        std::array<bool, 256> bit_array_256;
-        nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::big_octet_big_bit, 8, 1>(
-            octet_array.begin(), octet_array.end(), bit_array_256.begin());
-        std::array<bool, 255> bit_array_255;
-        std::copy_n(bit_array_256.begin(), 255, bit_array_255.begin());
-        return bit_array_255;
+    template<int bits>
+    static std::array<bool, bits> deserialize_bitarray(const std::vector<std::uint8_t> &blob) {
+
+        constexpr int octets = bits/8 + (bits%8 ? 1 : 0);
+        constexpr int bits_ceil = octets*8;
+
+        std::array<std::uint8_t, octets> in {};
+        BOOST_ASSERT(blob.size() == octets);
+        std::copy_n(blob.begin(), octets, in.begin());
+
+        std::array<bool, bits_ceil> out {};
+        nil::crypto3::detail::pack<nil::crypto3::stream_endian::big_octet_big_bit, nil::crypto3::stream_endian::big_octet_big_bit, 8, 1>(in.begin(), in.end(), out.begin());
+
+        std::array<bool, bits> res;
+        std::copy_n(out.begin(), bits, res.begin());
+
+        return res;
     }
 
-    static std::vector<std::vector<bool>> read_voters_public_keys(std::size_t tree_depth,
+
+    static std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> read_voters_public_keys(std::size_t tree_depth,
                                                                   const std::string &voter_public_key_output) {
         std::size_t participants_number = 1 << tree_depth;
-        std::vector<std::vector<bool>> result;
+        std::vector<std::vector<std::uint8_t>> blobs;
 
         for (auto i = 0; i < participants_number; i++) {
             if (!voter_public_key_output.empty()) {
-                result.emplace_back(read_bool_vector(voter_public_key_output + std::to_string(i)));
+                blobs.emplace_back(read_obj(voter_public_key_output + std::to_string(i) + ".bin"));
             }
         }
-        return result;
+        return deserialize_voters_public_keys(tree_depth, blobs);
     }
 
-    static std::vector<std::vector<bool>>
+    static std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>>
         deserialize_voters_public_keys(std::size_t tree_depth, const std::vector<std::vector<std::uint8_t>> &blobs) {
         std::size_t participants_number = 1 << tree_depth;
         BOOST_ASSERT(blobs.size() <= participants_number);
-        std::vector<std::vector<bool>> result;
+        std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> result;
 
         for (auto i = 0; i < blobs.size(); i++) {
-            result.emplace_back(deserialize_bool_vector(blobs[i]));
+            result.emplace_back(deserialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(blobs[i]));
         }
 
         for (auto i = blobs.size(); i < participants_number; i++) {
             result.emplace_back(
-                std::vector<bool>(encrypted_input_policy::hash_type::digest_bits, 0)
+                std::array<bool, encrypted_input_policy::hash_type::digest_bits> {}
             );
         }
 
@@ -1051,26 +1065,22 @@ void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, std::v
     std::array<bool, encrypted_input_policy::hash_type::digest_bits> pk {};
     hash<encrypted_input_policy::merkle_hash_type>(secret_keys[0], std::begin(pk));
     public_keys.emplace_back(pk);
-    std::vector<scalar_field_value_type> pk_field;
-    std::vector<scalar_field_value_type> sk_field;
+
     std::cout << "Public key of the Voter " << proof_idx << ": ";
     for (auto c : pk) {
         std::cout << int(c);
-        pk_field.emplace_back(int(c));
     }
-    for (auto c : secret_keys[0]) {
-        sk_field.emplace_back(int(c));
-    }
+
     std::cout << std::endl;
     std::cout << "Participants key pairs generated." << std::endl;
 
     std::cout << "Voter " << proof_idx << " keypair marshalling started..." << std::endl;
-    marshaling_policy::serialize_initial_phase_voter_data(pk_field, sk_field, voter_pk_out, voter_sk_out);
+    marshaling_policy::serialize_initial_phase_voter_data(pk, secret_keys[0], voter_pk_out, voter_sk_out);
     std::cout << "Marshalling finished." << std::endl;
 }
 
 void process_encrypted_input_mode_init_admin_phase(
-    std::size_t tree_depth, std::size_t eid_bits, const std::vector<std::vector<bool>> &public_keys,
+    std::size_t tree_depth, std::size_t eid_bits, const std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> &public_keys,
     std::vector<std::uint8_t> &r1cs_proving_key_out, std::vector<std::uint8_t> &r1cs_verification_key_out,
     std::vector<std::uint8_t> &public_key_output, std::vector<std::uint8_t> &secret_key_output,
     std::vector<std::uint8_t> &verification_key_output, std::vector<std::uint8_t> &eid_output,
@@ -1152,9 +1162,9 @@ void process_encrypted_input_mode_init_admin_phase(
 }
 
 void process_encrypted_input_mode_vote_phase(
-    std::size_t tree_depth, std::size_t voter_idx, std::size_t vote, const std::vector<std::vector<bool>> &public_keys,
+    std::size_t tree_depth, std::size_t voter_idx, std::size_t vote, const std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> &public_keys,
     const std::vector<typename marshaling_policy::scalar_field_value_type> &admin_rt_field,
-    const std::vector<bool> &eid, const std::vector<bool> &sk,
+    const std::vector<bool> &eid, std::array<bool, encrypted_input_policy::hash_type::digest_bits> &sk,
     const typename marshaling_policy::elgamal_public_key_type &pk_eid,
     const typename encrypted_input_policy::proof_system::keypair_type &gg_keypair,
     std::vector<std::uint8_t> &proof_blob, std::vector<std::uint8_t> &pinput_blob, std::vector<std::uint8_t> &ct_blob,
@@ -1168,6 +1178,11 @@ void process_encrypted_input_mode_vote_phase(
     BOOST_ASSERT_MSG(participants_number > proof_idx, "Voter index should be lass than number of participants!");
 
     std::cout << "Voter " << proof_idx << " generate encrypted ballot" << std::endl << std::endl;
+
+    for(auto c : public_keys[proof_idx]) {
+        std::cout<<(int)c;
+    }
+    std::cout<<std::endl;
 
     std::cout << "Voter with index " << proof_idx << " generates its merkle copath..." << std::endl;
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
@@ -1481,7 +1496,7 @@ void generate_vote(std::size_t tree_depth, std::size_t voter_idx, std::size_t vo
 
     auto rt = marshaling_policy::deserialize_scalar_vector(rt_blob);
     auto eid = marshaling_policy::deserialize_bool_vector(eid_blob);
-    auto sk = marshaling_policy::deserialize_bool_vector(sk_blob);
+    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(sk_blob);
     auto pk_eid = marshaling_policy::deserialize_pk_eid(pk_eid_blob);
 
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
@@ -1593,6 +1608,63 @@ bool verify_tally(std::size_t tree_depth,
     return is_tally_valid;
 }
 
+}
+
+void test() {
+    std::vector<std::vector<std::uint8_t>> pks(4);
+    std::vector<std::vector<std::uint8_t>> sks(4);
+    
+    for(int i = 0; i < 4; ++i) {
+        process_encrypted_input_mode_init_voter_phase(i, pks[i], sks[i]);
+    }
+
+    std::size_t tree_depth = 2;
+    std::size_t eid_bits = 64;
+    const std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, pks);
+
+    std::vector<std::uint8_t> r1cs_proving_key_out;
+    std::vector<std::uint8_t> r1cs_verification_key_out;
+
+    std::vector<std::uint8_t> public_key_output;
+    std::vector<std::uint8_t> secret_key_output;
+    std::vector<std::uint8_t> verification_key_output;
+    std::vector<std::uint8_t> eid_output;
+    std::vector<std::uint8_t> rt_output;
+
+    process_encrypted_input_mode_init_admin_phase(
+    tree_depth, eid_bits, public_keys,
+    r1cs_proving_key_out, r1cs_verification_key_out,
+    public_key_output, secret_key_output,
+    verification_key_output, eid_output,
+    rt_output);
+
+    std::size_t voter_idx = 0;
+    std::size_t vote = 1;
+    auto rt = marshaling_policy::deserialize_scalar_vector(rt_output);
+    auto eid = marshaling_policy::deserialize_bool_vector(eid_output);
+    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(sks[voter_idx]);
+    auto pk_eid = marshaling_policy::deserialize_pk_eid(public_key_output);
+
+    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
+        marshaling_policy::deserialize_pk_crs(r1cs_proving_key_out),
+        marshaling_policy::deserialize_vk_crs(r1cs_verification_key_out)};
+    std::vector<std::uint8_t> proof_blob;
+    std::vector<std::uint8_t> pinput_blob;
+    std::vector<std::uint8_t> ct_blob;
+    std::vector<std::uint8_t> eid_blob;
+    std::vector<std::uint8_t> sn_blob;
+    std::vector<std::uint8_t> rt_blob;
+    std::vector<std::uint8_t> vk_crs_blob;
+    std::vector<std::uint8_t> pk_eid_blob;
+    process_encrypted_input_mode_vote_phase(
+    tree_depth, voter_idx, vote, public_keys,
+    rt,
+    eid, sk,
+    pk_eid,
+    gg_keypair,
+    proof_blob, pinput_blob, ct_blob,
+    eid_blob, sn_blob, rt_blob,
+    vk_crs_blob, pk_eid_blob);
 }
 
 int main(int argc, char *argv[]) {
@@ -1729,8 +1801,8 @@ int main(int argc, char *argv[]) {
                 marshaling_policy::read_scalar_vector(vm["rt-output"].as<std::string>());
 
             auto eid = marshaling_policy::read_bool_vector(vm["eid-output"].as<std::string>());
-            auto sk = marshaling_policy::read_bool_vector(vm["voter-secret-key-output"].as<std::string>() +
-                                                          std::to_string(proof_idx));
+            auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(marshaling_policy::read_obj(vm["voter-secret-key-output"].as<std::string>() +
+                                                          std::to_string(proof_idx) + ".bin"));
             auto pk_eid = marshaling_policy::read_pk_eid(vm);
 
             typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
@@ -1816,6 +1888,8 @@ int main(int argc, char *argv[]) {
 
             process_encrypted_input_mode_tally_voter_phase(tree_depth, cts, vk_eid, gg_keypair, voting_result,
                                                            dec_proof);
+        } else if (vm["phase"].as<std::string>() == "test"){
+            test();
         } else {
             std::cout << desc << std::endl;
             return 0;

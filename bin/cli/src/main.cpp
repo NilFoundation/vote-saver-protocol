@@ -269,7 +269,7 @@ struct marshaling_policy {
     static void serialize_initial_phase_voter_data(const std::array<bool, encrypted_input_policy::hash_type::digest_bits> &voter_pubkey,
                                                    const std::array<bool, encrypted_input_policy::hash_type::digest_bits> &voter_skey,
                                                    std::vector<std::uint8_t> &voter_pk_out,
-                                                   std::vector<std::uint8_t> &voter_sk_out) {                                                                        endianness>));
+                                                   std::vector<std::uint8_t> &voter_sk_out) {
         voter_pk_out = serialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(voter_pubkey);
         voter_sk_out = serialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(voter_skey);
     }

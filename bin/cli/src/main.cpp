@@ -266,12 +266,12 @@ struct marshaling_policy {
         }
     }
 
-    static void serialize_initial_phase_voter_data(const std::array<bool, encrypted_input_policy::hash_type::digest_bits> &voter_pubkey,
-                                                   const std::array<bool, encrypted_input_policy::hash_type::digest_bits> &voter_skey,
+    static void serialize_initial_phase_voter_data(const std::array<bool, encrypted_input_policy::public_key_bits> &voter_pubkey,
+                                                   const std::array<bool, encrypted_input_policy::secret_key_bits> &voter_skey,
                                                    std::vector<std::uint8_t> &voter_pk_out,
                                                    std::vector<std::uint8_t> &voter_sk_out) {
-        voter_pk_out = serialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(voter_pubkey);
-        voter_sk_out = serialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(voter_skey);
+        voter_pk_out = serialize_bitarray<encrypted_input_policy::public_key_bits>(voter_pubkey);
+        voter_sk_out = serialize_bitarray<encrypted_input_policy::secret_key_bits>(voter_skey);
     }
 
     static void write_initial_phase_admin_data(
@@ -603,7 +603,7 @@ struct marshaling_policy {
     }
 
 
-    static std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> read_voters_public_keys(std::size_t tree_depth,
+    static std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> read_voters_public_keys(std::size_t tree_depth,
                                                                   const std::string &voter_public_key_output) {
         std::size_t participants_number = 1 << tree_depth;
         std::vector<std::vector<std::uint8_t>> blobs;
@@ -616,19 +616,19 @@ struct marshaling_policy {
         return deserialize_voters_public_keys(tree_depth, blobs);
     }
 
-    static std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>>
+    static std::vector<std::array<bool, encrypted_input_policy::public_key_bits>>
         deserialize_voters_public_keys(std::size_t tree_depth, const std::vector<std::vector<std::uint8_t>> &blobs) {
         std::size_t participants_number = 1 << tree_depth;
         BOOST_ASSERT(blobs.size() <= participants_number);
-        std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> result;
+        std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> result;
 
         for (auto i = 0; i < blobs.size(); i++) {
-            result.emplace_back(deserialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(blobs[i]));
+            result.emplace_back(deserialize_bitarray<encrypted_input_policy::public_key_bits>(blobs[i]));
         }
 
         for (auto i = blobs.size(); i < participants_number; i++) {
             result.emplace_back(
-                std::array<bool, encrypted_input_policy::hash_type::digest_bits> {}
+                std::array<bool, encrypted_input_policy::public_key_bits> {}
             );
         }
 
@@ -1062,7 +1062,7 @@ void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, std::v
     std::cout << "Voter " << proof_idx << " generates its public and secret keys..." << std::endl << std::endl;
     auto secret_keys = generate_random_data<bool, encrypted_input_policy::secret_key_bits>(1);
     std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> public_keys;
-    std::array<bool, encrypted_input_policy::hash_type::digest_bits> pk {};
+    std::array<bool, encrypted_input_policy::public_key_bits> pk {};
     hash<encrypted_input_policy::merkle_hash_type>(secret_keys[0], std::begin(pk));
     public_keys.emplace_back(pk);
 
@@ -1080,7 +1080,7 @@ void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, std::v
 }
 
 void process_encrypted_input_mode_init_admin_phase(
-    std::size_t tree_depth, std::size_t eid_bits, const std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> &public_keys,
+    std::size_t tree_depth, std::size_t eid_bits, const std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> &public_keys,
     std::vector<std::uint8_t> &r1cs_proving_key_out, std::vector<std::uint8_t> &r1cs_verification_key_out,
     std::vector<std::uint8_t> &public_key_output, std::vector<std::uint8_t> &secret_key_output,
     std::vector<std::uint8_t> &verification_key_output, std::vector<std::uint8_t> &eid_output,
@@ -1162,9 +1162,9 @@ void process_encrypted_input_mode_init_admin_phase(
 }
 
 void process_encrypted_input_mode_vote_phase(
-    std::size_t tree_depth, std::size_t voter_idx, std::size_t vote, const std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> &public_keys,
+    std::size_t tree_depth, std::size_t voter_idx, std::size_t vote, const std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> &public_keys,
     const std::vector<typename marshaling_policy::scalar_field_value_type> &admin_rt_field,
-    const std::vector<bool> &eid, std::array<bool, encrypted_input_policy::hash_type::digest_bits> &sk,
+    const std::vector<bool> &eid, std::array<bool, encrypted_input_policy::secret_key_bits> &sk,
     const typename marshaling_policy::elgamal_public_key_type &pk_eid,
     const typename encrypted_input_policy::proof_system::keypair_type &gg_keypair,
     std::vector<std::uint8_t> &proof_blob, std::vector<std::uint8_t> &pinput_blob, std::vector<std::uint8_t> &ct_blob,
@@ -1496,7 +1496,7 @@ void generate_vote(std::size_t tree_depth, std::size_t voter_idx, std::size_t vo
 
     auto rt = marshaling_policy::deserialize_scalar_vector(rt_blob);
     auto eid = marshaling_policy::deserialize_bool_vector(eid_blob);
-    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(sk_blob);
+    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(sk_blob);
     auto pk_eid = marshaling_policy::deserialize_pk_eid(pk_eid_blob);
 
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
@@ -1620,7 +1620,7 @@ void test() {
 
     std::size_t tree_depth = 2;
     std::size_t eid_bits = 64;
-    const std::vector<std::array<bool, encrypted_input_policy::hash_type::digest_bits>> public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, pks);
+    const std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, pks);
 
     std::vector<std::uint8_t> r1cs_proving_key_out;
     std::vector<std::uint8_t> r1cs_verification_key_out;
@@ -1642,7 +1642,7 @@ void test() {
     std::size_t vote = 1;
     auto rt = marshaling_policy::deserialize_scalar_vector(rt_output);
     auto eid = marshaling_policy::deserialize_bool_vector(eid_output);
-    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(sks[voter_idx]);
+    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(sks[voter_idx]);
     auto pk_eid = marshaling_policy::deserialize_pk_eid(public_key_output);
 
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
@@ -1801,7 +1801,7 @@ int main(int argc, char *argv[]) {
                 marshaling_policy::read_scalar_vector(vm["rt-output"].as<std::string>());
 
             auto eid = marshaling_policy::read_bool_vector(vm["eid-output"].as<std::string>());
-            auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::hash_type::digest_bits>(marshaling_policy::read_obj(vm["voter-secret-key-output"].as<std::string>() +
+            auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(marshaling_policy::read_obj(vm["voter-secret-key-output"].as<std::string>() +
                                                           std::to_string(proof_idx) + ".bin"));
             auto pk_eid = marshaling_policy::read_pk_eid(vm);
 

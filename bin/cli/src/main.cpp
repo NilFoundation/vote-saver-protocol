@@ -244,23 +244,20 @@ struct marshaling_policy {
         return {std::cbegin(blob_str), std::cend(blob_str)};
     }
 
-    static void write_initial_phase_voter_data(const std::vector<scalar_field_value_type> &voter_pubkey,
-                                               const std::vector<scalar_field_value_type> &voter_skey, std::size_t i,
+    static void write_initial_phase_voter_data(const std::array<bool, encrypted_input_policy::public_key_bits> &voter_pubkey,
+                                                   const std::array<bool, encrypted_input_policy::secret_key_bits> &voter_skey, std::size_t i,
                                                const std::string &voter_pk_out, const std::string &voter_sk_out) {
-        auto pubkey_blob = serialize_obj<pinput_marshaling_type>(
-            voter_pubkey,
-            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
-                                                                                                 endianness>));
+        std::vector<std::uint8_t> pubkey_blob;
+        std::vector<std::uint8_t> sk_blob;
+        
+        serialize_initial_phase_voter_data(voter_pubkey, voter_skey, pubkey_blob, sk_blob);
+
         if (!voter_pk_out.empty()) {
             auto filename = voter_pk_out + std::to_string(i) + ".bin";
             write_obj(std::filesystem::path(filename), {pubkey_blob});
         }
 
-        auto sk_blob = serialize_obj<pinput_marshaling_type>(
-            voter_skey,
-            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
-                                                                                                 endianness>));
-        if (!voter_sk_out.empty()) {
+       if (!voter_sk_out.empty()) {
             auto filename = voter_sk_out + std::to_string(i) + ".bin";
             write_obj(std::filesystem::path(filename), {sk_blob});
         }
@@ -281,63 +278,52 @@ struct marshaling_policy {
         const std::string &r1cs_verification_key_out, const std::string &public_key_output,
         const std::string &secret_key_output, const std::string &verification_key_output, const std::string &eid_output,
         const std::string &rt_output) {
-        auto pk_crs_blob = serialize_obj<r1cs_proving_key_marshalling_type>(
-            pk_crs,
-            std::function(
-                nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_proving_key<proving_key_type, endianness>));
+        
+        std::vector<std::uint8_t> pk_crs_blob;
+        std::vector<std::uint8_t> vk_crs_blob;
+        std::vector<std::uint8_t> pk_eid_blob;
+        std::vector<std::uint8_t> sk_eid_blob;
+        std::vector<std::uint8_t> vk_eid_blob;
+        std::vector<std::uint8_t> eid_blob;
+        std::vector<std::uint8_t> rt_blob;
+
+        serialize_initial_phase_admin_data(pk_crs, vk_crs, pk_eid,
+        sk_eid, vk_eid,
+        eid, rt, pk_crs_blob,
+        vk_crs_blob, pk_eid_blob,
+        sk_eid_blob, vk_eid_blob,
+        eid_blob, rt_blob);
+
         if (!r1cs_proving_key_out.empty()) {
             auto filename = r1cs_proving_key_out + ".bin";
             write_obj(std::filesystem::path(filename), {pk_crs_blob});
         }
 
-        auto vk_crs_blob = serialize_obj<r1cs_verification_key_marshaling_type>(
-            vk_crs,
-            std::function(
-                nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_verification_key<verification_key_type,
-                                                                                          endianness>));
         if (!r1cs_verification_key_out.empty()) {
             auto filename = r1cs_verification_key_out + ".bin";
             write_obj(std::filesystem::path(filename), {vk_crs_blob});
         }
 
-        auto pk_eid_blob = serialize_obj<public_key_marshaling_type>(
-            pk_eid,
-            std::function(nil::crypto3::marshalling::types::fill_public_key<elgamal_public_key_type, endianness>));
         if (!public_key_output.empty()) {
             auto filename = public_key_output + ".bin";
             write_obj(std::filesystem::path(filename), {pk_eid_blob});
         }
 
-        auto sk_eid_blob = serialize_obj<secret_key_marshaling_type>(
-            sk_eid,
-            std::function(nil::crypto3::marshalling::types::fill_private_key<elgamal_private_key_type, endianness>));
         if (!secret_key_output.empty()) {
             auto filename = secret_key_output + ".bin";
             write_obj(std::filesystem::path(filename), {sk_eid_blob});
         }
 
-        auto vk_eid_blob = serialize_obj<verification_key_marshaling_type>(
-            vk_eid,
-            std::function(
-                nil::crypto3::marshalling::types::fill_verification_key<elgamal_verification_key_type, endianness>));
         if (!verification_key_output.empty()) {
             auto filename = verification_key_output + ".bin";
             write_obj(std::filesystem::path(filename), {vk_eid_blob});
         }
 
-        auto eid_blob = serialize_obj<pinput_marshaling_type>(
-            eid,
-            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
-                                                                                                 endianness>));
         if (!eid_output.empty()) {
             auto filename = eid_output + ".bin";
             write_obj(std::filesystem::path(filename), {eid_blob});
         }
 
-        auto rt_blob = serialize_obj<pinput_marshaling_type>(
-            rt,
-            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
-                                                                                                 endianness>));
         if (!rt_output.empty()) {
             auto filename = rt_output + ".bin";
             write_obj(std::filesystem::path(filename), {rt_blob});
@@ -562,6 +548,34 @@ struct marshaling_policy {
         for (const auto &i : deserialize_scalar_vector(blob)) {
             result.emplace_back(i.data);
         }
+        return result;
+    }
+
+    static scalar_field_value_type get_field_element_from_bits(const std::vector<bool> &bits) {
+        BOOST_ASSERT(bits.size() < encrypted_input_policy::field_type::value_bits);
+        scalar_field_value_type result = scalar_field_value_type::zero();
+
+        for (std::size_t i = 0; i < bits.size(); ++i) {
+            /* push in the new bit */
+            const scalar_field_value_type v = (bits[bits.size() - 1 - i] ?
+                                                 scalar_field_value_type::one() :
+                                                 scalar_field_value_type::zero());
+            result = result + (result + v);
+        }
+
+        return result;
+    }
+
+    static std::vector<scalar_field_value_type> get_multi_field_element_from_bits(const std::vector<bool> &bits) {
+        std::vector<scalar_field_value_type> result;
+        const std::size_t chunk_size = encrypted_input_policy::field_type::value_bits - 1;
+        for (std::size_t i = 0; i < bits.size(); i+=chunk_size) {
+            std::vector<bool> field_bits(bits.begin()+i, bits.begin() + std::min(i + chunk_size, bits.size()));
+            /* push in the new bit */
+            const scalar_field_value_type v = get_field_element_from_bits(field_bits);
+            result.emplace_back(v);
+        }
+
         return result;
     }
 
@@ -804,7 +818,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         public_keys_field.push_back(pk_field);
         secret_keys_field.push_back(sk_field);
         marshaling_policy::write_initial_phase_voter_data(
-            public_keys_field.back(), secret_keys_field.back(), j,
+            pk, sk, j,
             vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "",
             vm.count("voter-secret-key-output") ? vm["voter-secret-key-output"].as<std::string>() : "");
         ++j;
@@ -814,43 +828,58 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     std::cout << "Merkle tree generation upon participants public keys started..." << std::endl;
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
         std::cbegin(public_keys), std::cend(public_keys));
-    std::vector<scalar_field_value_type> rt_field;
-    for (auto i : tree.root()) {
-        rt_field.emplace_back(int(i));
-    }
+    std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
 
     auto public_keys_read = marshaling_policy::read_voters_public_keys(
         vm["tree-depth"].as<std::size_t>(),
         vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "");
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>
         tree_built_from_read(std::cbegin(public_keys_read), std::cend(public_keys_read));
-    std::vector<scalar_field_value_type> rt_field_from_read;
-    for (auto i : tree_built_from_read.root()) {
-        rt_field_from_read.emplace_back(int(i));
-    }
+    std::vector<scalar_field_value_type> rt_field_from_read = marshaling_policy::get_multi_field_element_from_bits(tree_built_from_read.root());
     BOOST_ASSERT(rt_field == rt_field_from_read);
     std::cout << "Merkle tree generation finished." << std::endl;
 
     BOOST_ASSERT_MSG(vm.count("eid-bits"), "Eid length is not specified!");
     const std::size_t eid_size = vm["eid-bits"].as<std::size_t>();
     std::vector<bool> eid(eid_size);
-    std::vector<scalar_field_value_type> eid_field;
     std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
     std::cout << "Voting session (eid) is: ";
     for (auto i : eid) {
         std::cout << int(i);
-        eid_field.emplace_back(int(i));
     }
     std::cout << std::endl;
+    std::vector<scalar_field_value_type> eid_field = marshaling_policy::get_multi_field_element_from_bits(eid);
 
     std::cout << "Voting system administrator generates R1CS..." << std::endl;
     components::blueprint<encrypted_input_policy::field_type> bp;
     components::block_variable<encrypted_input_policy::field_type> m_block(bp, encrypted_input_policy::msg_size);
+
+    std::size_t chunk_size = encrypted_input_policy::field_type::value_bits - 1;
+    
+    components::blueprint_variable_vector<encrypted_input_policy::field_type> eid_packed;
+    std::size_t eid_packed_size = (eid.size() + (chunk_size - 1)) / chunk_size;
+    eid_packed.allocate(bp, eid_packed_size);
+    
+    components::blueprint_variable_vector<encrypted_input_policy::field_type> sn_packed;
+    std::size_t sn_packed_size = (encrypted_input_policy::hash_component::digest_bits + (chunk_size - 1)) / chunk_size;
+    sn_packed.allocate(bp, sn_packed_size);
+    
+    components::blueprint_variable_vector<encrypted_input_policy::field_type> root_packed;
+    std::size_t root_packed_size = (encrypted_input_policy::hash_component::digest_bits + (chunk_size - 1)) / chunk_size;
+    root_packed.allocate(bp, root_packed_size);
+
+    std::size_t primary_input_size = bp.num_variables();
+
     components::block_variable<encrypted_input_policy::field_type> eid_block(bp, eid.size());
     components::digest_variable<encrypted_input_policy::field_type> sn_digest(
         bp, encrypted_input_policy::hash_component::digest_bits);
     components::digest_variable<encrypted_input_policy::field_type> root_digest(
         bp, encrypted_input_policy::merkle_hash_component::digest_bits);
+
+    components::multipacking_component<encrypted_input_policy::field_type> eid_packer(bp, eid_block.bits, eid_packed, chunk_size);
+    components::multipacking_component<encrypted_input_policy::field_type> sn_packer(bp, sn_digest.bits, sn_packed, chunk_size);
+    components::multipacking_component<encrypted_input_policy::field_type> root_packer(bp, root_digest.bits, root_packed, chunk_size);
+    
     components::blueprint_variable_vector<encrypted_input_policy::field_type> address_bits_va;
     address_bits_va.allocate(bp, tree_depth);
     encrypted_input_policy::merkle_proof_component path_var(bp, tree_depth);
@@ -859,11 +888,17 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     encrypted_input_policy::voting_component vote_var(
         bp, m_block, eid_block, sn_digest, root_digest, address_bits_va, path_var, sk_block,
         components::blueprint_variable<encrypted_input_policy::field_type>(0));
+
+    eid_packer.generate_r1cs_constraints(true);
+    sn_packer.generate_r1cs_constraints(true);
+    root_packer.generate_r1cs_constraints(true);
+    
     path_var.generate_r1cs_constraints();
     vote_var.generate_r1cs_constraints();
     std::cout << "R1CS generation finished." << std::endl;
     std::cout << "Constraints number in the generated R1CS: " << bp.num_constraints() << std::endl;
-    bp.set_input_sizes(vote_var.get_input_size());
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    bp.set_input_sizes(primary_input_size);
 
     std::cout << "Administrator generates CRS..." << std::endl;
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair =
@@ -896,7 +931,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         vm.count("secret-key-output") ? vm["secret-key-output"].as<std::string>() : "",
         vm.count("verification-key-output") ? vm["verification-key-output"].as<std::string>() : "",
         vm.count("eid-output") ? vm["eid-output"].as<std::string>() : "",
-        vm.count("rt-output") ? vm["-output"].as<std::string>() : "");
+        vm.count("rt-output") ? vm["rt-output"].as<std::string>() : "");
     std::cout << "Marshalling finished." << std::endl;
 
     std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type> ct_n;
@@ -946,6 +981,12 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
         sk_block.generate_r1cs_witness(secret_keys[proof_idx]);
         BOOST_ASSERT(!bp.is_satisfied());
         vote_var.generate_r1cs_witness(tree.root(), sn);
+        BOOST_ASSERT(!bp.is_satisfied());
+        eid_packer.generate_r1cs_witness_from_bits();
+        BOOST_ASSERT(!bp.is_satisfied());
+        root_packer.generate_r1cs_witness_from_bits();
+        BOOST_ASSERT(!bp.is_satisfied());
+        sn_packer.generate_r1cs_witness_from_bits();
         BOOST_ASSERT(bp.is_satisfied());
 
         std::cout << "Voter " << proof_idx << " generates its vote consisting of proof and cipher text..." << std::endl;
@@ -968,9 +1009,9 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
 
         std::cout << "Voter " << proof_idx << " marshalling started..." << std::endl;
         std::size_t eid_offset = m.size();
-        std::size_t sn_offset = eid_offset + eid.size();
-        std::size_t rt_offset = sn_offset + sn.size();
-        std::size_t rt_offset_end = rt_offset + tree.root().size();
+        std::size_t sn_offset = eid_offset + eid_packed.size();
+        std::size_t rt_offset = sn_offset + sn_packed.size();
+        std::size_t rt_offset_end = rt_offset + root_packed.size();
         typename encrypted_input_policy::proof_system::primary_input_type pinput = bp.primary_input();
         BOOST_ASSERT(std::cbegin(pinput) + rt_offset_end == std::cend(pinput));
         BOOST_ASSERT((eid_field == typename encrypted_input_policy::proof_system::primary_input_type {
@@ -1092,44 +1133,72 @@ void process_encrypted_input_mode_init_admin_phase(
     std::cout << "Merkle tree generation upon participants public keys started..." << std::endl;
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
         std::cbegin(public_keys), std::cend(public_keys));
-    std::vector<scalar_field_value_type> rt_field;
-    for (auto i : tree.root()) {
-        rt_field.emplace_back(int(i));
-    }
+    std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
     std::cout << "Merkle tree generation finished." << std::endl;
 
     std::vector<bool> eid(eid_bits);
-    std::vector<scalar_field_value_type> eid_field;
     srand_once();
     std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
     std::cout << "Voting session (eid) is: ";
     for (auto i : eid) {
         std::cout << int(i);
-        eid_field.emplace_back(int(i));
     }
     std::cout << std::endl;
+    std::vector<scalar_field_value_type> eid_field = marshaling_policy::get_multi_field_element_from_bits(eid);
 
     std::cout << "Voting system administrator generates R1CS..." << std::endl;
     components::blueprint<encrypted_input_policy::field_type> bp;
     components::block_variable<encrypted_input_policy::field_type> m_block(bp, encrypted_input_policy::msg_size);
+
+    std::size_t chunk_size = encrypted_input_policy::field_type::value_bits - 1;
+    
+    components::blueprint_variable_vector<encrypted_input_policy::field_type> eid_packed;
+    std::size_t eid_packed_size = (eid.size() + (chunk_size - 1)) / chunk_size;
+    eid_packed.allocate(bp, eid_packed_size);
+    
+    components::blueprint_variable_vector<encrypted_input_policy::field_type> sn_packed;
+    std::size_t sn_packed_size = (encrypted_input_policy::hash_component::digest_bits + (chunk_size - 1)) / chunk_size;
+    sn_packed.allocate(bp, sn_packed_size);
+    
+    components::blueprint_variable_vector<encrypted_input_policy::field_type> root_packed;
+    std::size_t root_packed_size = (encrypted_input_policy::hash_component::digest_bits + (chunk_size - 1)) / chunk_size;
+    root_packed.allocate(bp, root_packed_size);
+
+    std::size_t primary_input_size = bp.num_variables();
+
     components::block_variable<encrypted_input_policy::field_type> eid_block(bp, eid.size());
     components::digest_variable<encrypted_input_policy::field_type> sn_digest(
         bp, encrypted_input_policy::hash_component::digest_bits);
     components::digest_variable<encrypted_input_policy::field_type> root_digest(
         bp, encrypted_input_policy::merkle_hash_component::digest_bits);
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+
+    components::multipacking_component<encrypted_input_policy::field_type> eid_packer(bp, eid_block.bits, eid_packed, chunk_size);
+    components::multipacking_component<encrypted_input_policy::field_type> sn_packer(bp, sn_digest.bits, sn_packed, chunk_size);
+    components::multipacking_component<encrypted_input_policy::field_type> root_packer(bp, root_digest.bits, root_packed, chunk_size);
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    
     components::blueprint_variable_vector<encrypted_input_policy::field_type> address_bits_va;
     address_bits_va.allocate(bp, tree_depth);
     encrypted_input_policy::merkle_proof_component path_var(bp, tree_depth);
     components::block_variable<encrypted_input_policy::field_type> sk_block(bp,
                                                                             encrypted_input_policy::secret_key_bits);
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
     encrypted_input_policy::voting_component vote_var(
         bp, m_block, eid_block, sn_digest, root_digest, address_bits_va, path_var, sk_block,
         components::blueprint_variable<encrypted_input_policy::field_type>(0));
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+
+    eid_packer.generate_r1cs_constraints(true);
+    sn_packer.generate_r1cs_constraints(true);
+    root_packer.generate_r1cs_constraints(true);
+    
     path_var.generate_r1cs_constraints();
     vote_var.generate_r1cs_constraints();
     std::cout << "R1CS generation finished." << std::endl;
     std::cout << "Constraints number in the generated R1CS: " << bp.num_constraints() << std::endl;
-    bp.set_input_sizes(vote_var.get_input_size());
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    bp.set_input_sizes(primary_input_size);
 
     std::cout << "Administrator generates CRS..." << std::endl;
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair =
@@ -1162,9 +1231,9 @@ void process_encrypted_input_mode_init_admin_phase(
 }
 
 void process_encrypted_input_mode_vote_phase(
-    std::size_t tree_depth, std::size_t voter_idx, std::size_t vote, const std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> &public_keys,
+    std::size_t tree_depth, std::size_t eid_bits, std::size_t voter_idx, std::size_t vote, const std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> &public_keys,
     const std::vector<typename marshaling_policy::scalar_field_value_type> &admin_rt_field,
-    const std::vector<bool> &eid, std::array<bool, encrypted_input_policy::secret_key_bits> &sk,
+    const std::vector<typename marshaling_policy::scalar_field_value_type> &eid_field, std::array<bool, encrypted_input_policy::secret_key_bits> &sk,
     const typename marshaling_policy::elgamal_public_key_type &pk_eid,
     const typename encrypted_input_policy::proof_system::keypair_type &gg_keypair,
     std::vector<std::uint8_t> &proof_blob, std::vector<std::uint8_t> &pinput_blob, std::vector<std::uint8_t> &ct_blob,
@@ -1173,6 +1242,12 @@ void process_encrypted_input_mode_vote_phase(
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
 
     std::size_t participants_number = 1 << tree_depth;
+    std::vector<bool> eid;
+    eid.resize(eid_bits);
+    std::size_t chunk_size = encrypted_input_policy::field_type::value_bits - 1;
+    for(std::size_t i = 0; i < eid_bits; ++i) {
+        eid[i] = nil::crypto3::multiprecision::bit_test(eid_field[i/chunk_size].data, i%chunk_size);
+    }
 
     std::size_t proof_idx = voter_idx;
     BOOST_ASSERT_MSG(participants_number > proof_idx, "Voter index should be lass than number of participants!");
@@ -1187,10 +1262,7 @@ void process_encrypted_input_mode_vote_phase(
     std::cout << "Voter with index " << proof_idx << " generates its merkle copath..." << std::endl;
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
         std::cbegin(public_keys), std::cend(public_keys));
-    std::vector<scalar_field_value_type> rt_field;
-    for (int i : tree.root()) {
-        rt_field.emplace_back(i);
-    }
+    std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
     BOOST_ASSERT(rt_field == admin_rt_field);
     containers::merkle_proof<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> path(tree,
                                                                                                            proof_idx);
@@ -1222,24 +1294,54 @@ void process_encrypted_input_mode_vote_phase(
 
     components::blueprint<encrypted_input_policy::field_type> bp;
     components::block_variable<encrypted_input_policy::field_type> m_block(bp, encrypted_input_policy::msg_size);
+    
+    components::blueprint_variable_vector<encrypted_input_policy::field_type> eid_packed;
+    std::size_t eid_packed_size = (eid.size() + (chunk_size - 1)) / chunk_size;
+    eid_packed.allocate(bp, eid_packed_size);
+    
+    components::blueprint_variable_vector<encrypted_input_policy::field_type> sn_packed;
+    std::size_t sn_packed_size = (encrypted_input_policy::hash_component::digest_bits + (chunk_size - 1)) / chunk_size;
+    sn_packed.allocate(bp, sn_packed_size);
+    
+    components::blueprint_variable_vector<encrypted_input_policy::field_type> root_packed;
+    std::size_t root_packed_size = (encrypted_input_policy::hash_component::digest_bits + (chunk_size - 1)) / chunk_size;
+    root_packed.allocate(bp, root_packed_size);
+
+    std::size_t primary_input_size = bp.num_variables();
+
     components::block_variable<encrypted_input_policy::field_type> eid_block(bp, eid.size());
     components::digest_variable<encrypted_input_policy::field_type> sn_digest(
         bp, encrypted_input_policy::hash_component::digest_bits);
     components::digest_variable<encrypted_input_policy::field_type> root_digest(
         bp, encrypted_input_policy::merkle_hash_component::digest_bits);
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+
+    components::multipacking_component<encrypted_input_policy::field_type> eid_packer(bp, eid_block.bits, eid_packed, chunk_size);
+    components::multipacking_component<encrypted_input_policy::field_type> sn_packer(bp, sn_digest.bits, sn_packed, chunk_size);
+    components::multipacking_component<encrypted_input_policy::field_type> root_packer(bp, root_digest.bits, root_packed, chunk_size);
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    
     components::blueprint_variable_vector<encrypted_input_policy::field_type> address_bits_va;
     address_bits_va.allocate(bp, tree_depth);
     encrypted_input_policy::merkle_proof_component path_var(bp, tree_depth);
     components::block_variable<encrypted_input_policy::field_type> sk_block(bp,
                                                                             encrypted_input_policy::secret_key_bits);
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
     encrypted_input_policy::voting_component vote_var(
         bp, m_block, eid_block, sn_digest, root_digest, address_bits_va, path_var, sk_block,
         components::blueprint_variable<encrypted_input_policy::field_type>(0));
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+        
+    eid_packer.generate_r1cs_constraints(true);
+    sn_packer.generate_r1cs_constraints(true);
+    root_packer.generate_r1cs_constraints(true);
+    
     path_var.generate_r1cs_constraints();
     vote_var.generate_r1cs_constraints();
     std::cout << "R1CS generation finished." << std::endl;
     std::cout << "Constraints number in the generated R1CS: " << bp.num_constraints() << std::endl;
-    bp.set_input_sizes(vote_var.get_input_size());
+    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    bp.set_input_sizes(primary_input_size);
 
     // BOOST_ASSERT(!bp.is_satisfied());
     path_var.generate_r1cs_witness(path, true);
@@ -1254,6 +1356,12 @@ void process_encrypted_input_mode_vote_phase(
     sk_block.generate_r1cs_witness(sk);
     BOOST_ASSERT(!bp.is_satisfied());
     vote_var.generate_r1cs_witness(tree.root(), sn);
+    BOOST_ASSERT(!bp.is_satisfied());
+    eid_packer.generate_r1cs_witness_from_bits();
+    BOOST_ASSERT(!bp.is_satisfied());
+    root_packer.generate_r1cs_witness_from_bits();
+    BOOST_ASSERT(!bp.is_satisfied());
+    sn_packer.generate_r1cs_witness_from_bits();
     BOOST_ASSERT(bp.is_satisfied());
 
     std::cout << "Voter " << proof_idx << " generates its vote consisting of proof and cipher text..." << std::endl;
@@ -1276,9 +1384,9 @@ void process_encrypted_input_mode_vote_phase(
 
     std::cout << "Voter " << proof_idx << " marshalling started..." << std::endl;
     std::size_t eid_offset = m.size();
-    std::size_t sn_offset = eid_offset + eid.size();
-    std::size_t rt_offset = sn_offset + sn.size();
-    std::size_t rt_offset_end = rt_offset + tree.root().size();
+    std::size_t sn_offset = eid_offset + eid_packed.size();
+    std::size_t rt_offset = sn_offset + sn_packed.size();
+    std::size_t rt_offset_end = rt_offset + root_packed.size();
     typename encrypted_input_policy::proof_system::primary_input_type pinput = bp.primary_input();
     marshaling_policy::serialize_data(
         proof_idx, gg_keypair.second, pk_eid, rerand_cipher_text.second,
@@ -1460,7 +1568,7 @@ void init_election(std::size_t tree_depth, std::size_t eid_bits,
     *rt_out = blob_to_buffer(rt_blob);
 }
 
-void generate_vote(std::size_t tree_depth, std::size_t voter_idx, std::size_t vote,
+void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t voter_idx, std::size_t vote,
                    const buffer<buffer<char> *const> *const public_keys_super_buffer,
                    const buffer<char> *const rt_buffer, const buffer<char> *const eid_buffer,
                    const buffer<char> *const sk_buffer, const buffer<char> *const pk_eid_buffer,
@@ -1494,8 +1602,8 @@ void generate_vote(std::size_t tree_depth, std::size_t voter_idx, std::size_t vo
     std::cout << "Finished conversion of rt,eid,sk,pk_eid,proving_key,verification_key from buffer to blob"
               << std::endl;
 
-    auto rt = marshaling_policy::deserialize_scalar_vector(rt_blob);
-    auto eid = marshaling_policy::deserialize_bool_vector(eid_blob);
+    auto rt_field = marshaling_policy::deserialize_scalar_vector(rt_blob);
+    auto eid_field = marshaling_policy::deserialize_scalar_vector(eid_blob);
     auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(sk_blob);
     auto pk_eid = marshaling_policy::deserialize_pk_eid(pk_eid_blob);
 
@@ -1505,7 +1613,7 @@ void generate_vote(std::size_t tree_depth, std::size_t voter_idx, std::size_t vo
 
     std::cout << "Finished deserialization of rt,eid,sk,pk_eid,proving_key,verification_key" << std::endl;
 
-    process_encrypted_input_mode_vote_phase(tree_depth, voter_idx, vote, public_keys, rt, eid, sk, pk_eid, gg_keypair,
+    process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, public_keys, rt_field, eid_field, sk, pk_eid, gg_keypair,
                                             proof_blob_out, pinput_blob_out, ct_blob_out, eid_blob_out, sn_blob_out,
                                             rt_blob_out, vk_crs_blob_out, pk_eid_blob_out);
 
@@ -1640,8 +1748,8 @@ void test() {
 
     std::size_t voter_idx = 0;
     std::size_t vote = 1;
-    auto rt = marshaling_policy::deserialize_scalar_vector(rt_output);
-    auto eid = marshaling_policy::deserialize_bool_vector(eid_output);
+    auto rt_field = marshaling_policy::deserialize_scalar_vector(rt_output);
+    auto eid_field = marshaling_policy::deserialize_scalar_vector(eid_output);
     auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(sks[voter_idx]);
     auto pk_eid = marshaling_policy::deserialize_pk_eid(public_key_output);
 
@@ -1657,9 +1765,9 @@ void test() {
     std::vector<std::uint8_t> vk_crs_blob;
     std::vector<std::uint8_t> pk_eid_blob;
     process_encrypted_input_mode_vote_phase(
-    tree_depth, voter_idx, vote, public_keys,
-    rt,
-    eid, sk,
+    tree_depth, eid_bits, voter_idx, vote, public_keys,
+    rt_field,
+    eid_field, sk,
     pk_eid,
     gg_keypair,
     proof_blob, pinput_blob, ct_blob,
@@ -1793,6 +1901,8 @@ int main(int argc, char *argv[]) {
             std::vector<std::uint8_t> pk_eid_blob;
 
             auto tree_depth = vm["tree-depth"].as<std::size_t>();
+            BOOST_ASSERT_MSG(vm.count("eid-bits"), "Eid length is not specified!");
+            const std::size_t eid_bits = vm["eid-bits"].as<std::size_t>();
             auto vote = vm["vote"].as<std::size_t>();
             auto proof_idx = vm["voter-idx"].as<std::size_t>();
             auto public_keys = marshaling_policy::read_voters_public_keys(
@@ -1800,7 +1910,7 @@ int main(int argc, char *argv[]) {
             std::vector<typename marshaling_policy::scalar_field_value_type> admin_rt_field =
                 marshaling_policy::read_scalar_vector(vm["rt-output"].as<std::string>());
 
-            auto eid = marshaling_policy::read_bool_vector(vm["eid-output"].as<std::string>());
+            auto eid_field = marshaling_policy::read_scalar_vector(vm["eid-output"].as<std::string>());
             auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(marshaling_policy::read_obj(vm["voter-secret-key-output"].as<std::string>() +
                                                           std::to_string(proof_idx) + ".bin"));
             auto pk_eid = marshaling_policy::read_pk_eid(vm);
@@ -1808,7 +1918,7 @@ int main(int argc, char *argv[]) {
             typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
                 marshaling_policy::read_pk_crs(vm), marshaling_policy::read_vk_crs(vm)};
 
-            process_encrypted_input_mode_vote_phase(tree_depth, proof_idx, vote, public_keys, admin_rt_field, eid, sk,
+            process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, proof_idx, vote, public_keys, admin_rt_field, eid_field, sk,
                                                     pk_eid, gg_keypair, proof_blob, pinput_blob, ct_blob, eid_blob,
                                                     sn_blob, rt_blob, vk_crs_blob, pk_eid_blob);
             if (vm.count("r1cs-proof-output")) {

@@ -205,7 +205,7 @@ exports.generate_vote = function (tree_depth, voter_index, vote, public_keys,
     ct_buffer_out = cli._malloc(8);
     sn_buffer_out = cli._malloc(8);
 
-    cli._generate_vote(tree_depth, voter_index, vote, public_keys_super_buffer,
+    cli._generate_vote(tree_depth, eid_len, voter_index, vote, public_keys_super_buffer,
         rt_buffer, eid_buffer, sk_buffer, pk_eid_buffer,
         r1cs_proving_key_buffer, r1cs_verification_key_buffer,
         proof_buffer_out, pinput_buffer_out, ct_buffer_out,

@@ -142,6 +142,24 @@ typename std::enable_if<std::is_same<Coordinates, curves::coordinates::projectiv
     os << "] )" << std::endl;
 }
 
+// #define DISABLE_OUTPUT
+
+template<typename ...Args>
+inline void log(Args && ...args)
+{
+#ifndef DISABLE_OUTPUT
+    (std::cout<< ... << args);
+#endif
+}
+
+template<typename ...Args>
+inline void logln(Args && ...args)
+{
+#ifndef DISABLE_OUTPUT
+    (std::cout << ... << args) << std::endl;
+#endif
+}
+
 struct encrypted_input_policy {
     using pairing_curve_type = curves::bls12_381;
     using curve_type = curves::jubjub;
@@ -1100,24 +1118,24 @@ void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, std::v
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
 
     std::size_t proof_idx = voter_idx;
-    std::cout << "Voter " << proof_idx << " generates its public and secret keys..." << std::endl << std::endl;
+    logln("Voter " , proof_idx , " generates its public and secret keys..." , "\n");
     auto secret_keys = generate_random_data<bool, encrypted_input_policy::secret_key_bits>(1);
     std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> public_keys;
     std::array<bool, encrypted_input_policy::public_key_bits> pk {};
     hash<encrypted_input_policy::merkle_hash_type>(secret_keys[0], std::begin(pk));
     public_keys.emplace_back(pk);
 
-    std::cout << "Public key of the Voter " << proof_idx << ": ";
+    log("Public key of the Voter " , proof_idx , ": ");
     for (auto c : pk) {
-        std::cout << int(c);
+        log(int(c));
     }
 
-    std::cout << std::endl;
-    std::cout << "Participants key pairs generated." << std::endl;
+    logln();;
+    logln("Participants key pairs generated." );
 
-    std::cout << "Voter " << proof_idx << " keypair marshalling started..." << std::endl;
+    logln("Voter " , proof_idx , " keypair marshalling started..." );
     marshaling_policy::serialize_initial_phase_voter_data(pk, secret_keys[0], voter_pk_out, voter_sk_out);
-    std::cout << "Marshalling finished." << std::endl;
+    logln("Marshalling finished." );
 }
 
 void process_encrypted_input_mode_init_admin_phase(
@@ -1128,25 +1146,25 @@ void process_encrypted_input_mode_init_admin_phase(
     std::vector<std::uint8_t> &rt_output) {
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
 
-    std::cout << "Administrator pre-initializes voting session..." << std::endl << std::endl;
+    logln("Administrator pre-initializes voting session..." , "\n");
 
-    std::cout << "Merkle tree generation upon participants public keys started..." << std::endl;
+    logln("Merkle tree generation upon participants public keys started..." );
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
         std::cbegin(public_keys), std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
-    std::cout << "Merkle tree generation finished." << std::endl;
+    logln("Merkle tree generation finished." );
 
     std::vector<bool> eid(eid_bits);
     srand_once();
     std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
-    std::cout << "Voting session (eid) is: ";
+    log("Voting session (eid) is: ");
     for (auto i : eid) {
-        std::cout << int(i);
+        log(int(i));
     }
-    std::cout << std::endl;
+    logln();;
     std::vector<scalar_field_value_type> eid_field = marshaling_policy::get_multi_field_element_from_bits(eid);
 
-    std::cout << "Voting system administrator generates R1CS..." << std::endl;
+    logln("Voting system administrator generates R1CS..." );
     components::blueprint<encrypted_input_policy::field_type> bp;
     components::block_variable<encrypted_input_policy::field_type> m_block(bp, encrypted_input_policy::msg_size);
 
@@ -1171,23 +1189,23 @@ void process_encrypted_input_mode_init_admin_phase(
         bp, encrypted_input_policy::hash_component::digest_bits);
     components::digest_variable<encrypted_input_policy::field_type> root_digest(
         bp, encrypted_input_policy::merkle_hash_component::digest_bits);
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
 
     components::multipacking_component<encrypted_input_policy::field_type> eid_packer(bp, eid_block.bits, eid_packed, chunk_size);
     components::multipacking_component<encrypted_input_policy::field_type> sn_packer(bp, sn_digest.bits, sn_packed, chunk_size);
     components::multipacking_component<encrypted_input_policy::field_type> root_packer(bp, root_digest.bits, root_packed, chunk_size);
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
     
     components::blueprint_variable_vector<encrypted_input_policy::field_type> address_bits_va;
     address_bits_va.allocate(bp, tree_depth);
     encrypted_input_policy::merkle_proof_component path_var(bp, tree_depth);
     components::block_variable<encrypted_input_policy::field_type> sk_block(bp,
                                                                             encrypted_input_policy::secret_key_bits);
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
     encrypted_input_policy::voting_component vote_var(
         bp, m_block, eid_block, sn_digest, root_digest, address_bits_va, path_var, sk_block,
         components::blueprint_variable<encrypted_input_policy::field_type>(0));
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
 
     eid_packer.generate_r1cs_constraints(true);
     sn_packer.generate_r1cs_constraints(true);
@@ -1195,19 +1213,18 @@ void process_encrypted_input_mode_init_admin_phase(
     
     path_var.generate_r1cs_constraints();
     vote_var.generate_r1cs_constraints();
-    std::cout << "R1CS generation finished." << std::endl;
-    std::cout << "Constraints number in the generated R1CS: " << bp.num_constraints() << std::endl;
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("R1CS generation finished." );
+    logln("Constraints number in the generated R1CS: " , bp.num_constraints() );
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
     bp.set_input_sizes(primary_input_size);
 
-    std::cout << "Administrator generates CRS..." << std::endl;
+    logln("Administrator generates CRS..." );
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair =
         nil::crypto3::zk::generate<encrypted_input_policy::proof_system>(bp.get_constraint_system());
-    std::cout << "CRS generation finished." << std::endl;
+    logln("CRS generation finished." );
 
-    std::cout << "Administrator generates private, public and verification keys for El-Gamal verifiable encryption "
-                 "scheme..."
-              << std::endl;
+    logln("Administrator generates private, public and verification keys for El-Gamal verifiable encryption "
+                 "scheme...");
     random::algebraic_random_device<typename encrypted_input_policy::pairing_curve_type::scalar_field_type> d;
     std::vector<scalar_field_value_type> rnd;
     for (std::size_t i = 0; i < encrypted_input_policy::msg_size * 3 + 2; ++i) {
@@ -1217,17 +1234,15 @@ void process_encrypted_input_mode_init_admin_phase(
         generate_keypair<encrypted_input_policy::encryption_scheme_type,
                          modes::verifiable_encryption<encrypted_input_policy::encryption_scheme_type>>(
             rnd, {gg_keypair, encrypted_input_policy::msg_size});
-    std::cout << "Private, public and verification keys for El-Gamal verifiable encryption scheme generated."
-              << std::endl
-              << std::endl;
-    std::cout << "====================================================================" << std::endl << std::endl;
+    logln("Private, public and verification keys for El-Gamal verifiable encryption scheme generated.", "\n");
+    logln("====================================================================" , "\n");
 
-    std::cout << "Administrator initial phase marshalling started..." << std::endl;
+    logln("Administrator initial phase marshalling started..." );
     marshaling_policy::serialize_initial_phase_admin_data(
         gg_keypair.first, gg_keypair.second, std::get<0>(keypair), std::get<1>(keypair), std::get<2>(keypair),
         eid_field, rt_field, r1cs_proving_key_out, r1cs_verification_key_out, public_key_output, secret_key_output,
         verification_key_output, eid_output, rt_output);
-    std::cout << "Marshalling finished." << std::endl;
+    logln("Marshalling finished." );
 }
 
 void process_encrypted_input_mode_vote_phase(
@@ -1252,30 +1267,30 @@ void process_encrypted_input_mode_vote_phase(
     std::size_t proof_idx = voter_idx;
     BOOST_ASSERT_MSG(participants_number > proof_idx, "Voter index should be lass than number of participants!");
 
-    std::cout << "Voter " << proof_idx << " generate encrypted ballot" << std::endl << std::endl;
+    logln("Voter " , proof_idx , " generate encrypted ballot" , "\n");
 
     for(auto c : public_keys[proof_idx]) {
-        std::cout<<(int)c;
+        log((int)c);
     }
-    std::cout<<std::endl;
+    logln();;
 
-    std::cout << "Voter with index " << proof_idx << " generates its merkle copath..." << std::endl;
+    logln("Voter with index " , proof_idx , " generates its merkle copath..." );
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
         std::cbegin(public_keys), std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
     BOOST_ASSERT(rt_field == admin_rt_field);
     containers::merkle_proof<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> path(tree,
                                                                                                            proof_idx);
-    std::cout << "Copath generated." << std::endl;
+    logln("Copath generated." );
     auto tree_pk_leaf = tree[proof_idx];
 
     std::vector<bool> m(encrypted_input_policy::msg_size, false);
     m[vote] = true;
-    std::cout << "Voter " << proof_idx << " is willing to vote with the following ballot: { ";
+    log("Voter " , proof_idx , " is willing to vote with the following ballot: { ");
     for (auto m_i : m) {
-        std::cout << int(m_i);
+        log(int(m_i));
     }
-    std::cout << " }" << std::endl;
+    logln(" }" );
     std::vector<typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type> m_field;
     m_field.reserve(m.size());
     for (const auto m_i : m) {
@@ -1286,11 +1301,11 @@ void process_encrypted_input_mode_vote_phase(
     std::copy(std::cbegin(eid), std::cend(eid), std::back_inserter(eid_sk));
     std::copy(std::cbegin(sk), std::cend(sk), std::back_inserter(eid_sk));
     std::vector<bool> sn = hash<encrypted_input_policy::hash_type>(eid_sk);
-    std::cout << "Sender has following serial number (sn) in current session: ";
+    log("Sender has following serial number (sn) in current session: ");
     for (auto i : sn) {
-        std::cout << int(i);
+        log(int(i));
     }
-    std::cout << std::endl;
+    logln();;
 
     components::blueprint<encrypted_input_policy::field_type> bp;
     components::block_variable<encrypted_input_policy::field_type> m_block(bp, encrypted_input_policy::msg_size);
@@ -1314,23 +1329,23 @@ void process_encrypted_input_mode_vote_phase(
         bp, encrypted_input_policy::hash_component::digest_bits);
     components::digest_variable<encrypted_input_policy::field_type> root_digest(
         bp, encrypted_input_policy::merkle_hash_component::digest_bits);
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
 
     components::multipacking_component<encrypted_input_policy::field_type> eid_packer(bp, eid_block.bits, eid_packed, chunk_size);
     components::multipacking_component<encrypted_input_policy::field_type> sn_packer(bp, sn_digest.bits, sn_packed, chunk_size);
     components::multipacking_component<encrypted_input_policy::field_type> root_packer(bp, root_digest.bits, root_packed, chunk_size);
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
     
     components::blueprint_variable_vector<encrypted_input_policy::field_type> address_bits_va;
     address_bits_va.allocate(bp, tree_depth);
     encrypted_input_policy::merkle_proof_component path_var(bp, tree_depth);
     components::block_variable<encrypted_input_policy::field_type> sk_block(bp,
                                                                             encrypted_input_policy::secret_key_bits);
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
     encrypted_input_policy::voting_component vote_var(
         bp, m_block, eid_block, sn_digest, root_digest, address_bits_va, path_var, sk_block,
         components::blueprint_variable<encrypted_input_policy::field_type>(0));
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
         
     eid_packer.generate_r1cs_constraints(true);
     sn_packer.generate_r1cs_constraints(true);
@@ -1338,9 +1353,9 @@ void process_encrypted_input_mode_vote_phase(
     
     path_var.generate_r1cs_constraints();
     vote_var.generate_r1cs_constraints();
-    std::cout << "R1CS generation finished." << std::endl;
-    std::cout << "Constraints number in the generated R1CS: " << bp.num_constraints() << std::endl;
-    std::cout << "Variables number in the generated R1CS: " << bp.num_variables() << std::endl;
+    logln("R1CS generation finished." );
+    logln("Constraints number in the generated R1CS: " , bp.num_constraints() );
+    logln("Variables number in the generated R1CS: " , bp.num_variables() );
     bp.set_input_sizes(primary_input_size);
 
     // BOOST_ASSERT(!bp.is_satisfied());
@@ -1364,15 +1379,15 @@ void process_encrypted_input_mode_vote_phase(
     sn_packer.generate_r1cs_witness_from_bits();
     BOOST_ASSERT(bp.is_satisfied());
 
-    std::cout << "Voter " << proof_idx << " generates its vote consisting of proof and cipher text..." << std::endl;
+    logln("Voter " , proof_idx , " generates its vote consisting of proof and cipher text..." );
     random::algebraic_random_device<typename encrypted_input_policy::pairing_curve_type::scalar_field_type> d;
     typename encrypted_input_policy::encryption_scheme_type::cipher_type cipher_text =
         encrypt<encrypted_input_policy::encryption_scheme_type,
                 modes::verifiable_encryption<encrypted_input_policy::encryption_scheme_type>>(
             m_field, {d(), pk_eid, gg_keypair, bp.primary_input(), bp.auxiliary_input()});
-    std::cout << "Vote generated." << std::endl;
+    logln("Vote generated." );
 
-    std::cout << "Rerandomization of the cipher text and proof started..." << std::endl;
+    logln("Rerandomization of the cipher text and proof started..." );
     std::vector<typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type> rnd_rerandomization;
     for (std::size_t i = 0; i < 3; ++i) {
         rnd_rerandomization.emplace_back(d());
@@ -1380,9 +1395,9 @@ void process_encrypted_input_mode_vote_phase(
     typename encrypted_input_policy::encryption_scheme_type::cipher_type rerand_cipher_text =
         rerandomize<encrypted_input_policy::encryption_scheme_type>(rnd_rerandomization, cipher_text.first,
                                                                     {pk_eid, gg_keypair, cipher_text.second});
-    std::cout << "Rerandomization finished." << std::endl;
+    logln("Rerandomization finished." );
 
-    std::cout << "Voter " << proof_idx << " marshalling started..." << std::endl;
+    logln("Voter " , proof_idx , " marshalling started..." );
     std::size_t eid_offset = m.size();
     std::size_t sn_offset = eid_offset + eid_packed.size();
     std::size_t rt_offset = sn_offset + sn_packed.size();
@@ -1400,16 +1415,16 @@ void process_encrypted_input_mode_vote_phase(
         typename encrypted_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + rt_offset,
                                                                            std::cbegin(pinput) + rt_offset_end},
         proof_blob, pinput_blob, ct_blob, eid_blob, sn_blob, rt_blob, vk_crs_blob, pk_eid_blob);
-    std::cout << "Marshalling finished." << std::endl;
+    logln("Marshalling finished." );
 
-    std::cout << "Sender verifies rerandomized encrypted ballot and proof..." << std::endl;
+    logln("Sender verifies rerandomized encrypted ballot and proof..." );
     bool enc_verification_ans = verify_encryption<encrypted_input_policy::encryption_scheme_type>(
         rerand_cipher_text.first,
         {pk_eid, gg_keypair.second, rerand_cipher_text.second,
          typename encrypted_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + m.size(),
                                                                             std::cend(pinput)}});
     BOOST_ASSERT(enc_verification_ans);
-    std::cout << "Encryption verification of rerandomazed cipher text and proof finished." << std::endl;
+    logln("Encryption verification of rerandomazed cipher text and proof finished." );
 }
 
 void process_encrypted_input_mode_tally_admin_phase(
@@ -1420,13 +1435,11 @@ void process_encrypted_input_mode_tally_admin_phase(
     const typename encrypted_input_policy::proof_system::keypair_type &gg_keypair,
     std::vector<std::uint8_t> &dec_proof_blob,
     std::vector<std::uint8_t> &voting_res_blob) {
-    std::cout << "Administrator processes tally phase - aggregates encrypted ballots, decrypts aggregated ballot, "
-                 "generate decryption proof..."
-              << std::endl
-              << std::endl;
+    logln("Administrator processes tally phase - aggregates encrypted ballots, decrypts aggregated ballot, "
+                 "generate decryption proof...", "\n");
 
     auto ct_agg = cts[0];
-    std::cout << "Administrator counts final results..." << std::endl;
+    logln("Administrator counts final results..." );
     for (auto proof_idx = 1; proof_idx < cts.size(); proof_idx++) {
         auto ct_i = cts[proof_idx];
         BOOST_ASSERT_MSG(std::size(ct_agg) == std::size(ct_i), "Wrong size of the ct!");
@@ -1434,26 +1447,26 @@ void process_encrypted_input_mode_tally_admin_phase(
             ct_agg[i] = ct_agg[i] + ct_i[i];
         }
     }
-    std::cout << "Final results are ready." << std::endl;
+    logln("Final results are ready." );
 
-    std::cout << "Final results decryption..." << std::endl;
+    logln("Final results decryption..." );
     typename encrypted_input_policy::encryption_scheme_type::decipher_type decipher_rerand_sum_text =
         decrypt<encrypted_input_policy::encryption_scheme_type,
                 modes::verifiable_encryption<encrypted_input_policy::encryption_scheme_type>>(
             ct_agg, {sk_eid, vk_eid, gg_keypair});
-    std::cout << "Decryption finished." << std::endl;
+    logln("Decryption finished." );
     BOOST_ASSERT_MSG(decipher_rerand_sum_text.first.size() == encrypted_input_policy::msg_size,
                      "Deciphered lens not equal");
 
-    std::cout << "Deciphered results of voting:" << std::endl;
+    logln("Deciphered results of voting:" );
     for (std::size_t i = 0; i < encrypted_input_policy::msg_size; ++i) {
-        std::cout << decipher_rerand_sum_text.first[i].data << ", ";
+        log(decipher_rerand_sum_text.first[i].data , ", ");
     }
-    std::cout << std::endl;
+    logln();;
 
-    std::cout << "Tally phase marshalling started..." << std::endl;
+    logln("Tally phase marshalling started..." );
     marshaling_policy::serialize_tally_phase_data(decipher_rerand_sum_text, dec_proof_blob, voting_res_blob);
-    std::cout << "Marshalling finished." << std::endl;
+    logln("Marshalling finished." );
 }
 
 bool process_encrypted_input_mode_tally_voter_phase(
@@ -1463,10 +1476,8 @@ bool process_encrypted_input_mode_tally_voter_phase(
     const typename encrypted_input_policy::proof_system::keypair_type &gg_keypair,
     const std::vector<typename marshaling_policy::scalar_field_value_type> &voting_result,
     const typename encrypted_input_policy::encryption_scheme_type::decipher_type::second_type &dec_proof) {
-    std::cout << "Voter processes tally phase - aggregates encrypted ballots, verifies voting result using decryption "
-                 "proof..."
-              << std::endl
-              << std::endl;
+    logln("Voter processes tally phase - aggregates encrypted ballots, verifies voting result using decryption "
+                 "proof...", "\n");
 
     std::size_t participants_number = 1 << tree_depth;
 
@@ -1479,16 +1490,16 @@ bool process_encrypted_input_mode_tally_voter_phase(
         }
     }
 
-    std::cout << "Verification of the deciphered tally result." << std::endl;
+    logln("Verification of the deciphered tally result." );
     bool dec_verification_ans = verify_decryption<encrypted_input_policy::encryption_scheme_type>(
         ct_agg, voting_result, {vk_eid, gg_keypair, dec_proof});
     BOOST_ASSERT_MSG(dec_verification_ans, "Decryption proof verification failed.");
-    std::cout << "Decryption proof verification succeeded." << std::endl;
-    std::cout << "Results of voting:" << std::endl;
+    logln("Decryption proof verification succeeded." );
+    logln("Results of voting:" );
     for (std::size_t i = 0; i < encrypted_input_policy::msg_size; ++i) {
-        std::cout << voting_result[i].data << ", ";
+        log(voting_result[i].data , ", ");
     }
-    std::cout << std::endl;
+    logln();;
 
     return dec_verification_ans;
 }
@@ -1549,11 +1560,11 @@ void init_election(std::size_t tree_depth, std::size_t eid_bits,
     std::vector<std::uint8_t> rt_blob;
 
     auto blobs = super_buffer_to_blobs(public_keys_super_buffer);
-    std::cout << "Finished conversion from buffer to blobs of public keys" << std::endl;
+    logln("Finished conversion from buffer to blobs of public keys" );
 
     auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
 
-    std::cout << "Finished deserialization of public keys" << std::endl;
+    logln("Finished deserialization of public keys" );
 
     process_encrypted_input_mode_init_admin_phase(tree_depth, eid_bits, public_keys, r1cs_proving_key_blob,
                                                   r1cs_verification_key_blob, public_key_blob, secret_key_blob,
@@ -1587,10 +1598,10 @@ void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t vot
     std::vector<std::uint8_t> pk_eid_blob_out;
 
     auto blobs = super_buffer_to_blobs(public_keys_super_buffer);
-    std::cout << "Finished conversion from buffer to blobs of public keys" << std::endl;
+    logln("Finished conversion from buffer to blobs of public keys" );
 
     auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
-    std::cout << "Finished deserialization of public keys" << std::endl;
+    logln("Finished deserialization of public keys" );
 
     auto rt_blob = buffer_to_blob(rt_buffer);
     auto eid_blob = buffer_to_blob(eid_buffer);
@@ -1599,8 +1610,7 @@ void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t vot
     auto proving_key_blob = buffer_to_blob(r1cs_proving_key_buffer);
     auto verification_key_blob = buffer_to_blob(r1cs_verification_key_buffer);
 
-    std::cout << "Finished conversion of rt,eid,sk,pk_eid,proving_key,verification_key from buffer to blob"
-              << std::endl;
+    logln("Finished conversion of rt,eid,sk,pk_eid,proving_key,verification_key from buffer to blob");
 
     auto rt_field = marshaling_policy::deserialize_scalar_vector(rt_blob);
     auto eid_field = marshaling_policy::deserialize_scalar_vector(eid_blob);
@@ -1611,7 +1621,7 @@ void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t vot
         marshaling_policy::deserialize_pk_crs(proving_key_blob),
         marshaling_policy::deserialize_vk_crs(verification_key_blob)};
 
-    std::cout << "Finished deserialization of rt,eid,sk,pk_eid,proving_key,verification_key" << std::endl;
+    logln("Finished deserialization of rt,eid,sk,pk_eid,proving_key,verification_key");
 
     process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, public_keys, rt_field, eid_field, sk, pk_eid, gg_keypair,
                                             proof_blob_out, pinput_blob_out, ct_blob_out, eid_blob_out, sn_blob_out,
@@ -1632,7 +1642,7 @@ void tally_votes(std::size_t tree_depth,
                  buffer<char> *const dec_proof_buffer_out,
                  buffer<char> *const voting_res_buffer_out) {
 
-    std::cout << "tally votes begin deserialization" <<std::endl;
+    logln("tally votes begin deserialization" );
 
     std::vector<std::uint8_t> sk_eid_blob = buffer_to_blob(sk_eid_buffer);
     std::vector<std::uint8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
@@ -1640,14 +1650,14 @@ void tally_votes(std::size_t tree_depth,
     std::vector<std::uint8_t> vk_crs_blob = buffer_to_blob(vk_crs_buffer);
     std::vector<std::vector<std::uint8_t>> cts_blobs = super_buffer_to_blobs(cts_super_buffer);
 
-    std::cout << "tally votes finished converting from buffers to blobs" <<std::endl;
+    logln("tally votes finished converting from buffers to blobs" );
 
 
     auto sk_eid = marshaling_policy::deserialize_sk_eid(sk_eid_blob);
     auto vk_eid = marshaling_policy::deserialize_vk_eid(vk_eid_blob);
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
         marshaling_policy::deserialize_pk_crs(pk_crs_blob), marshaling_policy::deserialize_vk_crs(vk_crs_blob)};
-    std::cout << "tally votes begin cts deserialization" <<std::endl;
+    logln("tally votes begin cts deserialization" );
     std::size_t participants_number = 1 << tree_depth;
     BOOST_ASSERT(cts_blobs.size() <= participants_number);
     std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
@@ -1656,18 +1666,18 @@ void tally_votes(std::size_t tree_depth,
         cts.push_back(marshaling_policy::deserialize_ct(cts_blobs[proof_idx]));
     }
 
-    std::cout << "tally votes finished deserialization" <<std::endl;
+    logln("tally votes finished deserialization" );
 
     std::vector<std::uint8_t> dec_proof_blob;
     std::vector<std::uint8_t> voting_res_blob;
 
     process_encrypted_input_mode_tally_admin_phase(tree_depth, cts, sk_eid, vk_eid, gg_keypair, dec_proof_blob,
                                                    voting_res_blob);
-     std::cout << "tally votes begin blobs to buffers conversion" <<std::endl;
+     logln("tally votes begin blobs to buffers conversion" );
 
     *dec_proof_buffer_out = blob_to_buffer(dec_proof_blob);
     *voting_res_buffer_out = blob_to_buffer(voting_res_blob);
-     std::cout << "tally votes finished blobs to buffers conversion" <<std::endl;
+     logln("tally votes finished blobs to buffers conversion" );
 
 }
 
@@ -1679,7 +1689,7 @@ bool verify_tally(std::size_t tree_depth,
                   buffer<char> *const dec_proof_buffer,
                   buffer<char> *const voting_res_buffer
 ) {
-    std::cout << "verify tally begin deserialization" <<std::endl;
+    logln("verify tally begin deserialization" );
 
     std::vector<std::uint8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
     std::vector<std::uint8_t> pk_crs_blob = buffer_to_blob(pk_crs_buffer);
@@ -1688,7 +1698,7 @@ bool verify_tally(std::size_t tree_depth,
     std::vector<std::uint8_t> voting_res_blob = buffer_to_blob(voting_res_buffer);
     std::vector<std::vector<std::uint8_t>> cts_blobs = super_buffer_to_blobs(cts_super_buffer);
 
-    std::cout << "verify tally finished converting from buffers to blobs" <<std::endl;
+    logln("verify tally finished converting from buffers to blobs" );
 
     auto vk_eid = marshaling_policy::deserialize_vk_eid(vk_eid_blob);
     typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
@@ -1697,7 +1707,7 @@ bool verify_tally(std::size_t tree_depth,
     auto voting_result = marshaling_policy::deserialize_scalar_vector(voting_res_blob);
     auto dec_proof = marshaling_policy::deserialize_decryption_proof(dec_proof_blob);
 
-    std::cout << "verify tally begin cts deserialization" <<std::endl;
+    logln("verify tally begin cts deserialization" );
     std::size_t participants_number = 1 << tree_depth;
     BOOST_ASSERT(cts_blobs.size() <= participants_number);
     std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
@@ -1706,12 +1716,12 @@ bool verify_tally(std::size_t tree_depth,
         cts.push_back(marshaling_policy::deserialize_ct(cts_blobs[proof_idx]));
     }
 
-    std::cout << "verify tally finished deserialization" <<std::endl;
+    logln("verify tally finished deserialization" );
 
     bool is_tally_valid = process_encrypted_input_mode_tally_voter_phase(tree_depth, cts, vk_eid, gg_keypair, voting_result,
                                                            dec_proof);
 
-    std::cout<<(is_tally_valid ? "tally is valid": "tally is invalid")<<std::endl;
+    logln((is_tally_valid ? "tally is valid": "tally is invalid"));
 
     return is_tally_valid;
 }

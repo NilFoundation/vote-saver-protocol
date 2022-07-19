@@ -844,15 +844,15 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     std::cout << "Voters key pairs generated." << std::endl;
 
     std::cout << "Merkle tree generation upon participants public keys started..." << std::endl;
-    containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
+    auto tree = containers::make_merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(
         std::cbegin(public_keys), std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
 
     auto public_keys_read = marshaling_policy::read_voters_public_keys(
         vm["tree-depth"].as<std::size_t>(),
         vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "");
-    containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>
-        tree_built_from_read(std::cbegin(public_keys_read), std::cend(public_keys_read));
+    auto tree_built_from_read = containers::make_merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>
+        (std::cbegin(public_keys_read), std::cend(public_keys_read));
     std::vector<scalar_field_value_type> rt_field_from_read = marshaling_policy::get_multi_field_element_from_bits(tree_built_from_read.root());
     BOOST_ASSERT(rt_field == rt_field_from_read);
     std::cout << "Merkle tree generation finished." << std::endl;
@@ -1149,7 +1149,7 @@ void process_encrypted_input_mode_init_admin_phase(
     logln("Administrator pre-initializes voting session..." , "\n");
 
     logln("Merkle tree generation upon participants public keys started..." );
-    containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
+    auto tree = containers::make_merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(
         std::cbegin(public_keys), std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
     logln("Merkle tree generation finished." );
@@ -1275,7 +1275,7 @@ void process_encrypted_input_mode_vote_phase(
     logln();
 
     logln("Voter with index " , proof_idx , " generates its merkle copath..." );
-    containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
+    auto tree = containers::make_merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(
         std::cbegin(public_keys), std::cend(public_keys));
     std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
     BOOST_ASSERT(rt_field == admin_rt_field);

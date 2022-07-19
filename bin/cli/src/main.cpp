@@ -1130,7 +1130,7 @@ void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, std::v
         log(int(c));
     }
 
-    logln();;
+    logln();
     logln("Participants key pairs generated." );
 
     logln("Voter " , proof_idx , " keypair marshalling started..." );
@@ -1161,7 +1161,7 @@ void process_encrypted_input_mode_init_admin_phase(
     for (auto i : eid) {
         log(int(i));
     }
-    logln();;
+    logln();
     std::vector<scalar_field_value_type> eid_field = marshaling_policy::get_multi_field_element_from_bits(eid);
 
     logln("Voting system administrator generates R1CS..." );
@@ -1272,7 +1272,7 @@ void process_encrypted_input_mode_vote_phase(
     for(auto c : public_keys[proof_idx]) {
         log((int)c);
     }
-    logln();;
+    logln();
 
     logln("Voter with index " , proof_idx , " generates its merkle copath..." );
     containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree(
@@ -1305,7 +1305,7 @@ void process_encrypted_input_mode_vote_phase(
     for (auto i : sn) {
         log(int(i));
     }
-    logln();;
+    logln();
 
     components::blueprint<encrypted_input_policy::field_type> bp;
     components::block_variable<encrypted_input_policy::field_type> m_block(bp, encrypted_input_policy::msg_size);
@@ -1462,7 +1462,7 @@ void process_encrypted_input_mode_tally_admin_phase(
     for (std::size_t i = 0; i < encrypted_input_policy::msg_size; ++i) {
         log(decipher_rerand_sum_text.first[i].data , ", ");
     }
-    logln();;
+    logln();
 
     logln("Tally phase marshalling started..." );
     marshaling_policy::serialize_tally_phase_data(decipher_rerand_sum_text, dec_proof_blob, voting_res_blob);
@@ -1499,7 +1499,7 @@ bool process_encrypted_input_mode_tally_voter_phase(
     for (std::size_t i = 0; i < encrypted_input_policy::msg_size; ++i) {
         log(voting_result[i].data , ", ");
     }
-    logln();;
+    logln();
 
     return dec_verification_ans;
 }

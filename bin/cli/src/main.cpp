@@ -28,8 +28,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
-#include "detail/r1cs_examples.hpp"
-#include "detail/sha256_component.hpp"
 #include <nil/crypto3/zk/components/voting/encrypted_input_voting.hpp>
 
 #include <nil/crypto3/algebra/curves/bls12.hpp>

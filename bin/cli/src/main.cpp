@@ -662,7 +662,7 @@ struct marshaling_policy {
         }
         BOOST_ASSERT(hashes.size() == tree_length);
 
-        return containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(hashes.begin(), hashes.end());
+        return containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(1 << tree_depth, hashes.begin(), hashes.end());
     } 
 
     static std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> read_voters_public_keys(std::size_t tree_depth,

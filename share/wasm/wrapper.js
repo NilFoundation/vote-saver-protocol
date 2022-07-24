@@ -110,6 +110,7 @@ exports.generate_voter_keypair = function() {
  * @property {Uint8Array} verification_key
  * @property {Uint8Array} eid
  * @property {Uint8Array} rt
+ * @property {Uint8Array} merkle_tree
  */
 
 const eid_len = 64;
@@ -131,11 +132,13 @@ exports.init_election = function (tree_depth, public_keys) {
     verification_key_bptr = cli._malloc(8);
     eid_bptr = cli._malloc(8);
     rt_bptr = cli._malloc(8);
+    merkle_tree_bptr = cli._malloc(8);
+    
 
     cli._init_election(tree_depth, eid_len, public_keys_super_buffer,
                        r1cs_proving_key_bptr, r1cs_verification_key_bptr,
                        public_key_bptr, secret_key_bptr, verification_key_bptr,
-                       eid_bptr, rt_bptr);
+                       eid_bptr, rt_bptr, merkle_tree_bptr);
     
     r1cs_proving_key_blob = BufferPtrToUint8ArrayAndFree(r1cs_proving_key_bptr);
     r1cs_verification_key_blob = BufferPtrToUint8ArrayAndFree(r1cs_verification_key_bptr);
@@ -144,6 +147,7 @@ exports.init_election = function (tree_depth, public_keys) {
     verification_key_blob = BufferPtrToUint8ArrayAndFree(verification_key_bptr);
     eid_blob = BufferPtrToUint8ArrayAndFree(eid_bptr);
     rt_blob = BufferPtrToUint8ArrayAndFree(rt_bptr);
+    merkle_tree_blob = BufferPtrToUint8ArrayAndFree(merkle_tree_bptr);
     
     freeSuperBuffer(public_keys_super_buffer);
     cli._free(public_keys_super_buffer);
@@ -154,6 +158,7 @@ exports.init_election = function (tree_depth, public_keys) {
     cli._free(verification_key_bptr);
     cli._free(eid_bptr);
     cli._free(rt_bptr);
+    cli._free(merkle_tree_bptr);
     
     return {
         r1cs_proving_key: r1cs_proving_key_blob,
@@ -162,7 +167,8 @@ exports.init_election = function (tree_depth, public_keys) {
         secret_key: secret_key_blob,
         verification_key: verification_key_blob,
         eid: eid_blob,
-        rt: rt_blob
+        rt: rt_blob,
+        merkle_tree: merkle_tree_blob
     };
 }
 
@@ -179,7 +185,7 @@ exports.init_election = function (tree_depth, public_keys) {
  * @param {number} tree_depth 
  * @param {number} voter_index 
  * @param {number} vote 
- * @param {Uint8Array[]} public_keys 
+ * @param {Uint8Array} merkle_tree 
  * @param {Uint8Array} rt 
  * @param {Uint8Array} eid 
  * @param {Uint8Array} sk 
@@ -188,10 +194,10 @@ exports.init_election = function (tree_depth, public_keys) {
  * @param {Uint8Array} r1cs_verification_key 
  * @returns {VoteData}
  */
-exports.generate_vote = function (tree_depth, voter_index, vote, public_keys,
+exports.generate_vote = function (tree_depth, voter_index, vote, merkle_tree,
               rt, eid, sk, pk_eid, r1cs_proving_key,
               r1cs_verification_key) {
-    public_keys_super_buffer = Uint8ArrayArrayToSuperBufferPtr(public_keys);
+    merkle_tree_buffer = Uint8ArrayToBufferPtr(merkle_tree);
     rt_buffer = Uint8ArrayToBufferPtr(rt);
     eid_buffer = Uint8ArrayToBufferPtr(eid);
     sk_buffer = Uint8ArrayToBufferPtr(sk);
@@ -205,7 +211,7 @@ exports.generate_vote = function (tree_depth, voter_index, vote, public_keys,
     ct_buffer_out = cli._malloc(8);
     sn_buffer_out = cli._malloc(8);
 
-    cli._generate_vote(tree_depth, eid_len, voter_index, vote, public_keys_super_buffer,
+    cli._generate_vote(tree_depth, eid_len, voter_index, vote, merkle_tree_buffer,
         rt_buffer, eid_buffer, sk_buffer, pk_eid_buffer,
         r1cs_proving_key_buffer, r1cs_verification_key_buffer,
         proof_buffer_out, pinput_buffer_out, ct_buffer_out,
@@ -221,8 +227,8 @@ exports.generate_vote = function (tree_depth, voter_index, vote, public_keys,
     cli._free(ct_buffer_out);
     cli._free(sn_buffer_out);
 
-    freeSuperBuffer(public_keys_super_buffer);
-    cli._free(public_keys_super_buffer);
+    freeBuffer(merkle_tree_buffer);
+    cli._free(merkle_tree_buffer);
     freeBuffer(rt_buffer);
     cli._free(rt_buffer);
     freeBuffer(eid_buffer);

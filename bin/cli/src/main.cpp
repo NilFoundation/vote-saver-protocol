@@ -660,7 +660,7 @@ struct marshaling_policy {
         }
         BOOST_ASSERT(hashes.size() == tree_length);
 
-        return containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(hashes.begin(), hashes.end());
+        return containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(1 << tree_depth, hashes.begin(), hashes.end());
     } 
 
     static std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> read_voters_public_keys(std::size_t tree_depth,
@@ -1592,7 +1592,8 @@ void init_election(std::size_t tree_depth, std::size_t eid_bits,
                    const buffer<buffer<char> *const> *const public_keys_super_buffer,
                    buffer<char> *const r1cs_proving_key_out, buffer<char> *const r1cs_verification_key_out,
                    buffer<char> *const public_key_out, buffer<char> *const secret_key_out,
-                   buffer<char> *const verification_key_out, buffer<char> *const eid_out, buffer<char> *const rt_out) {
+                   buffer<char> *const verification_key_out, buffer<char> *const eid_out, buffer<char> *const rt_out,
+                   buffer<char> *const merkle_tree_out) {
     std::vector<std::uint8_t> r1cs_proving_key_blob;
     std::vector<std::uint8_t> r1cs_verification_key_blob;
     std::vector<std::uint8_t> public_key_blob;
@@ -1620,10 +1621,11 @@ void init_election(std::size_t tree_depth, std::size_t eid_bits,
     *verification_key_out = blob_to_buffer(verification_key_blob);
     *eid_out = blob_to_buffer(eid_blob);
     *rt_out = blob_to_buffer(rt_blob);
+    *merkle_tree_out = blob_to_buffer(merkle_tree_blob);
 }
 
 void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t voter_idx, std::size_t vote,
-                   const buffer<buffer<char> *const> *const public_keys_super_buffer,
+                   const buffer<char> *const merkle_tree_buffer,
                    const buffer<char> *const rt_buffer, const buffer<char> *const eid_buffer,
                    const buffer<char> *const sk_buffer, const buffer<char> *const pk_eid_buffer,
                    const buffer<char> *const r1cs_proving_key_buffer,
@@ -1640,12 +1642,7 @@ void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t vot
     std::vector<std::uint8_t> vk_crs_blob_out;
     std::vector<std::uint8_t> pk_eid_blob_out;
 
-    auto blobs = super_buffer_to_blobs(public_keys_super_buffer);
-    logln("Finished conversion from buffer to blobs of public keys" );
-
-    auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
-    logln("Finished deserialization of public keys" );
-
+    auto merkle_tree_blob = buffer_to_blob(merkle_tree_buffer);
     auto rt_blob = buffer_to_blob(rt_buffer);
     auto eid_blob = buffer_to_blob(eid_buffer);
     auto sk_blob = buffer_to_blob(sk_buffer);
@@ -1653,8 +1650,9 @@ void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t vot
     auto proving_key_blob = buffer_to_blob(r1cs_proving_key_buffer);
     auto verification_key_blob = buffer_to_blob(r1cs_verification_key_buffer);
 
-    logln("Finished conversion of rt,eid,sk,pk_eid,proving_key,verification_key from buffer to blob");
+    logln("Finished conversion of merkle_tree,rt,eid,sk,pk_eid,proving_key,verification_key from buffer to blob");
 
+    auto merkle_tree = marshaling_policy::deserialize_merkle_tree(tree_depth, merkle_tree_blob);
     auto rt_field = marshaling_policy::deserialize_scalar_vector(rt_blob);
     auto eid_field = marshaling_policy::deserialize_scalar_vector(eid_blob);
     auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(sk_blob);
@@ -1664,12 +1662,9 @@ void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t vot
         marshaling_policy::deserialize_pk_crs(proving_key_blob),
         marshaling_policy::deserialize_vk_crs(verification_key_blob)};
 
-    logln("Finished deserialization of rt,eid,sk,pk_eid,proving_key,verification_key");
+    logln("Finished deserialization of merkle_tree,rt,eid,sk,pk_eid,proving_key,verification_key");
 
-    auto tree = containers::make_merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(
-        std::cbegin(public_keys), std::cend(public_keys));
-
-    process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, tree, rt_field, eid_field, sk, pk_eid, gg_keypair,
+    process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, merkle_tree, rt_field, eid_field, sk, pk_eid, gg_keypair,
                                             proof_blob_out, pinput_blob_out, ct_blob_out, eid_blob_out, sn_blob_out,
                                             rt_blob_out, vk_crs_blob_out, pk_eid_blob_out);
 

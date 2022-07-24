@@ -16,7 +16,7 @@ function test() {
     for(var i=0; i < num_participants; ++i) {
         vote = (i*3) % 25;
         console.log(`voter ${i} votes ${vote}`);
-        vote_data = wrapper.generate_vote(tree_depth, i, vote, public_keys,
+        vote_data = wrapper.generate_vote(tree_depth, i, vote, election.merkle_tree,
             election.rt, election.eid, keypairs[i].secret_key,
             election.public_key, election.r1cs_proving_key, election.r1cs_verification_key);
         vote_datas.push(vote_data);

@@ -1294,6 +1294,8 @@ void process_encrypted_input_mode_init_admin_phase(
     logln("Marshalling finished." );
 }
 
+// #define DEBUG_VERIFY_BALLOT
+
 void process_encrypted_input_mode_vote_phase(
     std::size_t tree_depth, std::size_t eid_bits, std::size_t voter_idx, std::size_t vote, const containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> &tree,
     const std::vector<typename marshaling_policy::scalar_field_value_type> &admin_rt_field,
@@ -1458,15 +1460,18 @@ void process_encrypted_input_mode_vote_phase(
                                                                            std::cbegin(pinput) + rt_offset_end},
         proof_blob, pinput_blob, ct_blob, eid_blob, sn_blob, rt_blob, vk_crs_blob, pk_eid_blob);
     logln("Marshalling finished." );
-
+#ifdef DEBUG_VERIFY_BALLOT
     logln("Sender verifies rerandomized encrypted ballot and proof..." );
     bool enc_verification_ans = verify_encryption<encrypted_input_policy::encryption_scheme_type>(
         rerand_cipher_text.first,
         {pk_eid, gg_keypair.second, rerand_cipher_text.second,
          typename encrypted_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + m.size(),
-                                                                            std::cend(pinput)}});
+                                                                        std::cend(pinput)}});
     BOOST_ASSERT(enc_verification_ans);
     logln("Encryption verification of rerandomazed cipher text and proof finished." );
+#else
+    logln("Skipping ballot verification");
+#endif
 }
 
 void process_encrypted_input_mode_tally_admin_phase(

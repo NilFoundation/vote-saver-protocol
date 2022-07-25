@@ -28,8 +28,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
-#include "detail/r1cs_examples.hpp"
-#include "detail/sha256_component.hpp"
 #include <nil/crypto3/zk/components/voting/encrypted_input_voting.hpp>
 
 #include <nil/crypto3/algebra/curves/bls12.hpp>
@@ -56,7 +54,7 @@
 #include <nil/crypto3/marshalling/zk/types/r1cs_gg_ppzksnark/primary_input.hpp>
 #include <nil/crypto3/marshalling/zk/types/r1cs_gg_ppzksnark/proof.hpp>
 #include <nil/crypto3/marshalling/zk/types/r1cs_gg_ppzksnark/verification_key.hpp>
-#include <nil/crypto3/marshalling/zk/types/r1cs_gg_ppzksnark/proving_key.hpp>
+#include <nil/crypto3/marshalling/zk/types/r1cs_gg_ppzksnark/fast_proving_key.hpp>
 #include <nil/crypto3/marshalling/pubkey/types/elgamal_verifiable.hpp>
 
 #include <nil/crypto3/pubkey/algorithm/generate_keypair.hpp>
@@ -200,7 +198,7 @@ struct marshaling_policy {
         nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_extended_verification_key<
             nil::marshalling::field_type<endianness>, verification_key_type>;
     using r1cs_proving_key_marshalling_type =
-        nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_proving_key<nil::marshalling::field_type<endianness>,
+        nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_fast_proving_key<nil::marshalling::field_type<endianness>,
                                                                         proving_key_type>;
     using public_key_marshaling_type =
         nil::crypto3::marshalling::types::elgamal_verifiable_public_key<nil::marshalling::field_type<endianness>,
@@ -362,7 +360,7 @@ struct marshaling_policy {
         r1cs_proving_key_out = serialize_obj<r1cs_proving_key_marshalling_type>(
             pk_crs,
             std::function(
-                nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_proving_key<proving_key_type, endianness>));
+                nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_fast_proving_key<proving_key_type, endianness>));
 
         r1cs_verification_key_out = serialize_obj<r1cs_verification_key_marshaling_type>(
             vk_crs,
@@ -756,14 +754,14 @@ struct marshaling_policy {
         return deserialize_obj<r1cs_proving_key_marshalling_type, proving_key_type>(
             pk_crs_blob,
             std::function(
-                nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_proving_key<proving_key_type, endianness>));
+                nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_fast_proving_key<proving_key_type, endianness>));
     }
 
     static proving_key_type deserialize_pk_crs(const std::vector<std::uint8_t> &pk_crs_blob) {
         return deserialize_obj<r1cs_proving_key_marshalling_type, proving_key_type>(
             pk_crs_blob,
             std::function(
-                nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_proving_key<proving_key_type, endianness>));
+                nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_fast_proving_key<proving_key_type, endianness>));
     }
 
     static proof_type read_proof(const boost::program_options::variables_map &vm, std::size_t proof_idx) {

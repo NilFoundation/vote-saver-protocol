@@ -11,6 +11,7 @@ function test() {
         keypairs.push(keypair);
         public_keys.push(keypair.public_key);
     }
+    admin_keys = wrapper.admin_keygen(tree_depth)
     election = wrapper.init_election(tree_depth, public_keys);
     vote_datas = []
     for(var i=0; i < num_participants; ++i) {
@@ -18,18 +19,18 @@ function test() {
         console.log(`voter ${i} votes ${vote}`);
         vote_data = wrapper.generate_vote(tree_depth, i, vote, election.merkle_tree,
             election.rt, election.eid, keypairs[i].secret_key,
-            election.public_key, election.r1cs_proving_key, election.r1cs_verification_key);
+            admin_keys.public_key, admin_keys.r1cs_proving_key, admin_keys.r1cs_verification_key);
         vote_datas.push(vote_data);
     }
     cts = vote_datas.map(vote_data=>vote_data.ct);
-    tally_data = wrapper.tally_votes(tree_depth, election.secret_key,
-         election.verification_key, election.r1cs_proving_key,
-         election.r1cs_verification_key, cts);
+    tally_data = wrapper.tally_votes(tree_depth, admin_keys.secret_key,
+        admin_keys.verification_key, admin_keys.r1cs_proving_key,
+        admin_keys.r1cs_verification_key, cts);
     
     console.log(tally_data.voting_res);    
 
-    is_tally_valid = wrapper.verify_tally(tree_depth, cts, election.verification_key,
-        election.r1cs_proving_key, election.r1cs_verification_key,
+    is_tally_valid = wrapper.verify_tally(tree_depth, cts, admin_keys.verification_key,
+        admin_keys.r1cs_proving_key, admin_keys.r1cs_verification_key,
         tally_data.dec_proof, tally_data.voting_res);
     
     console.log('is_tally_valid: ', is_tally_valid);

@@ -71,40 +71,52 @@ void generate_voter_keypair(buffer<char> *const voter_pk_out, buffer<char> *cons
     *voter_sk_out = blob_to_buffer(voter_sk_blob);
 }
 
+void admin_keygen(std::size_t tree_depth, std::size_t eid_bits,
+                    buffer<char> *const r1cs_proving_key_out, buffer<char> *const r1cs_verification_key_out,
+                    buffer<char> *const public_key_out, buffer<char> *const secret_key_out,
+                    buffer<char> *const verification_key_out) {
+    std::vector<std::uint8_t> r1cs_proving_key_blob;
+    std::vector<std::uint8_t> r1cs_verification_key_blob;
+    std::vector<std::uint8_t> public_key_blob;
+    std::vector<std::uint8_t> secret_key_blob;
+    std::vector<std::uint8_t> verification_key_blob;
+
+    process_encrypted_input_mode_init_admin_phase_generate_keys(
+            tree_depth, eid_bits,
+            r1cs_proving_key_blob, r1cs_verification_key_blob,
+            public_key_blob, secret_key_blob,
+            verification_key_blob);
+
+    *r1cs_proving_key_out = blob_to_buffer(r1cs_proving_key_blob);
+    *r1cs_verification_key_out = blob_to_buffer(r1cs_verification_key_blob);
+    *public_key_out = blob_to_buffer(public_key_blob);
+    *secret_key_out = blob_to_buffer(secret_key_blob);
+    *verification_key_out = blob_to_buffer(verification_key_blob);
+}
+
 void init_election(std::size_t tree_depth, std::size_t eid_bits,
-                   const buffer<buffer<char> *const> *const public_keys_super_buffer,
-buffer<char> *const r1cs_proving_key_out, buffer<char> *const r1cs_verification_key_out,
-buffer<char> *const public_key_out, buffer<char> *const secret_key_out,
-buffer<char> *const verification_key_out, buffer<char> *const eid_out, buffer<char> *const rt_out,
-        buffer<char> *const merkle_tree_out) {
-std::vector<std::uint8_t> r1cs_proving_key_blob;
-std::vector<std::uint8_t> r1cs_verification_key_blob;
-std::vector<std::uint8_t> public_key_blob;
-std::vector<std::uint8_t> secret_key_blob;
-std::vector<std::uint8_t> verification_key_blob;
-std::vector<std::uint8_t> eid_blob;
-std::vector<std::uint8_t> rt_blob;
-std::vector<std::uint8_t> merkle_tree_blob;
+                    const buffer<buffer<char> *const> *const public_keys_super_buffer,
+                    buffer<char> *const eid_out, buffer<char> *const rt_out,
+                    buffer<char> *const merkle_tree_out) {
+    std::vector<std::uint8_t> eid_blob;
+    std::vector<std::uint8_t> rt_blob;
+    std::vector<std::uint8_t> merkle_tree_blob;
 
-auto blobs = super_buffer_to_blobs(public_keys_super_buffer);
-logln("Finished conversion from buffer to blobs of public keys" );
+    auto blobs = super_buffer_to_blobs(public_keys_super_buffer);
+    logln("Finished conversion from buffer to blobs of public keys" );
 
-auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
+    auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
 
-logln("Finished deserialization of public keys" );
+    logln("Finished deserialization of public keys" );
 
-process_encrypted_input_mode_init_admin_phase(tree_depth, eid_bits, public_keys, r1cs_proving_key_blob,
-        r1cs_verification_key_blob, public_key_blob, secret_key_blob,
-        verification_key_blob, eid_blob, rt_blob, merkle_tree_blob);
+    process_encrypted_input_mode_init_admin_phase_generate_data(
+            tree_depth, eid_bits, public_keys,
+            eid_blob,
+            rt_blob, merkle_tree_blob);
 
-*r1cs_proving_key_out = blob_to_buffer(r1cs_proving_key_blob);
-*r1cs_verification_key_out = blob_to_buffer(r1cs_verification_key_blob);
-*public_key_out = blob_to_buffer(public_key_blob);
-*secret_key_out = blob_to_buffer(secret_key_blob);
-*verification_key_out = blob_to_buffer(verification_key_blob);
-*eid_out = blob_to_buffer(eid_blob);
-*rt_out = blob_to_buffer(rt_blob);
-*merkle_tree_out = blob_to_buffer(merkle_tree_blob);
+    *eid_out = blob_to_buffer(eid_blob);
+    *rt_out = blob_to_buffer(rt_blob);
+    *merkle_tree_out = blob_to_buffer(merkle_tree_blob);
 }
 
 void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t voter_idx, std::size_t vote,

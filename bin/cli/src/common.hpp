@@ -293,11 +293,10 @@ struct marshaling_policy {
         std::vector<std::uint8_t> rt_blob;
         std::vector<std::uint8_t> merkle_tree_blob;
 
-        serialize_initial_phase_admin_data(pk_crs, vk_crs, pk_eid,
-                                           sk_eid, vk_eid,
-                                           eid, rt, hashes, pk_crs_blob,
-                                           vk_crs_blob, pk_eid_blob,
-                                           sk_eid_blob, vk_eid_blob,
+        serialize_initial_phase_admin_keys(pk_crs, vk_crs, pk_eid, sk_eid, vk_eid,
+                                           pk_crs_blob, vk_crs_blob,
+                                           pk_eid_blob, sk_eid_blob, vk_eid_blob);
+        serialize_initial_phase_admin_data(eid, rt, hashes,
                                            eid_blob, rt_blob, merkle_tree_blob);
 
         if (!r1cs_proving_key_out.empty()) {
@@ -336,15 +335,13 @@ struct marshaling_policy {
         }
     }
 
-    static void serialize_initial_phase_admin_data(
-            const proving_key_type &pk_crs, const verification_key_type &vk_crs, const elgamal_public_key_type &pk_eid,
+
+    static void serialize_initial_phase_admin_keys(const proving_key_type &pk_crs, const verification_key_type &vk_crs,
+            const elgamal_public_key_type &pk_eid,
             const elgamal_private_key_type &sk_eid, const elgamal_verification_key_type &vk_eid,
-            const primary_input_type &eid, const primary_input_type &rt, const std::vector<std::array<bool, encrypted_input_policy::merkle_hash_type::digest_bits>> &merkle_tree_hashes,
             std::vector<std::uint8_t> &r1cs_proving_key_out,
             std::vector<std::uint8_t> &r1cs_verification_key_out, std::vector<std::uint8_t> &public_key_output,
-            std::vector<std::uint8_t> &secret_key_output, std::vector<std::uint8_t> &verification_key_output,
-            std::vector<std::uint8_t> &eid_output, std::vector<std::uint8_t> &rt_output,
-            std::vector<std::uint8_t> &merkle_tree_output) {
+            std::vector<std::uint8_t> &secret_key_output, std::vector<std::uint8_t> &verification_key_output) {
         r1cs_proving_key_out = serialize_obj<r1cs_proving_key_marshalling_type>(
                 pk_crs,
                 std::function(
@@ -368,7 +365,13 @@ struct marshaling_policy {
                 vk_eid,
                 std::function(
                         nil::crypto3::marshalling::types::fill_verification_key<elgamal_verification_key_type, endianness>));
+    }
 
+    static void serialize_initial_phase_admin_data(
+            const primary_input_type &eid, const primary_input_type &rt,
+            const std::vector<std::array<bool, encrypted_input_policy::merkle_hash_type::digest_bits>> &merkle_tree_hashes,
+            std::vector<std::uint8_t> &eid_output, std::vector<std::uint8_t> &rt_output,
+            std::vector<std::uint8_t> &merkle_tree_output) {        
         eid_output = serialize_obj<pinput_marshaling_type>(
                 eid,
                 std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
@@ -843,31 +846,13 @@ void process_encrypted_input_mode_init_voter_phase(std::size_t voter_idx, std::v
     logln("Marshalling finished." );
 }
 
-void process_encrypted_input_mode_init_admin_phase(
-        std::size_t tree_depth, std::size_t eid_bits, const std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> &public_keys,
-        std::vector<std::uint8_t> &r1cs_proving_key_out, std::vector<std::uint8_t> &r1cs_verification_key_out,
-        std::vector<std::uint8_t> &public_key_output, std::vector<std::uint8_t> &secret_key_output,
-        std::vector<std::uint8_t> &verification_key_output, std::vector<std::uint8_t> &eid_output,
-        std::vector<std::uint8_t> &rt_output, std::vector<std::uint8_t> &merkle_tree_output) {
+void process_encrypted_input_mode_init_admin_phase_generate_keys(
+    std::size_t tree_depth,  std::size_t eid_bits,
+    std::vector<std::uint8_t> &r1cs_proving_key_out, std::vector<std::uint8_t> &r1cs_verification_key_out,
+    std::vector<std::uint8_t> &public_key_output, std::vector<std::uint8_t> &secret_key_output,
+    std::vector<std::uint8_t> &verification_key_output
+) {
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
-
-    logln("Administrator pre-initializes voting session..." , "\n");
-
-    logln("Merkle tree generation upon participants public keys started..." );
-    auto tree = containers::make_merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(
-            std::cbegin(public_keys), std::cend(public_keys));
-    std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
-    logln("Merkle tree generation finished." );
-
-    std::vector<bool> eid(eid_bits);
-    srand_once();
-    std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
-    log("Voting session (eid) is: ");
-    for (auto i : eid) {
-        log(int(i));
-    }
-    logln();
-    std::vector<scalar_field_value_type> eid_field = marshaling_policy::get_multi_field_element_from_bits(eid);
 
     logln("Voting system administrator generates R1CS..." );
     components::blueprint<encrypted_input_policy::field_type> bp;
@@ -876,7 +861,7 @@ void process_encrypted_input_mode_init_admin_phase(
     std::size_t chunk_size = encrypted_input_policy::field_type::value_bits - 1;
 
     components::blueprint_variable_vector<encrypted_input_policy::field_type> eid_packed;
-    std::size_t eid_packed_size = (eid.size() + (chunk_size - 1)) / chunk_size;
+    std::size_t eid_packed_size = (eid_bits + (chunk_size - 1)) / chunk_size;
     eid_packed.allocate(bp, eid_packed_size);
 
     components::blueprint_variable_vector<encrypted_input_policy::field_type> sn_packed;
@@ -889,7 +874,7 @@ void process_encrypted_input_mode_init_admin_phase(
 
     std::size_t primary_input_size = bp.num_variables();
 
-    components::block_variable<encrypted_input_policy::field_type> eid_block(bp, eid.size());
+    components::block_variable<encrypted_input_policy::field_type> eid_block(bp, eid_bits);
     components::digest_variable<encrypted_input_policy::field_type> sn_digest(
             bp, encrypted_input_policy::hash_component::digest_bits);
     components::digest_variable<encrypted_input_policy::field_type> root_digest(
@@ -942,7 +927,40 @@ void process_encrypted_input_mode_init_admin_phase(
     logln("Private, public and verification keys for El-Gamal verifiable encryption scheme generated.", "\n");
     logln("====================================================================" , "\n");
 
-    logln("Administrator initial phase marshalling started..." );
+    logln("Administrator initial phase keys marshalling started..." );
+
+    marshaling_policy::serialize_initial_phase_admin_keys(
+    gg_keypair.first, gg_keypair.second, std::get<0>(keypair),
+    std::get<1>(keypair), std::get<2>(keypair), r1cs_proving_key_out,
+    r1cs_verification_key_out, public_key_output, secret_key_output,
+    verification_key_output);
+    logln("Marshalling finished." );
+}
+
+void process_encrypted_input_mode_init_admin_phase_generate_data(
+        std::size_t tree_depth, std::size_t eid_bits, const std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> &public_keys,
+        std::vector<std::uint8_t> &eid_output,
+        std::vector<std::uint8_t> &rt_output, std::vector<std::uint8_t> &merkle_tree_output) {
+    using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
+
+    logln("Administrator pre-initializes voting session..." , "\n");
+
+    logln("Merkle tree generation upon participants public keys started..." );
+    auto tree = containers::make_merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(
+            std::cbegin(public_keys), std::cend(public_keys));
+    std::vector<scalar_field_value_type> rt_field = marshaling_policy::get_multi_field_element_from_bits(tree.root());
+    logln("Merkle tree generation finished." );
+
+    std::vector<bool> eid(eid_bits);
+    srand_once();
+    std::generate(eid.begin(), eid.end(), [&]() { return std::rand() % 2; });
+    log("Voting session (eid) is: ");
+    for (auto i : eid) {
+        log(int(i));
+    }
+    logln();
+    std::vector<scalar_field_value_type> eid_field = marshaling_policy::get_multi_field_element_from_bits(eid);
+
     std::vector<std::vector<bool>> hashes(tree.cbegin(), tree.cend());
     std::size_t hashes_size = hashes.size();
     std::vector<std::array<bool, encrypted_input_policy::merkle_hash_type::digest_bits>>
@@ -952,10 +970,10 @@ void process_encrypted_input_mode_init_admin_phase(
                     encrypted_input_policy::merkle_hash_type::digest_bits,
                     hashes_array_vector[i].begin());
     }
+    logln("Administrator initial phase data marshalling started..." );
     marshaling_policy::serialize_initial_phase_admin_data(
-            gg_keypair.first, gg_keypair.second, std::get<0>(keypair), std::get<1>(keypair), std::get<2>(keypair),
-            eid_field, rt_field, hashes_array_vector, r1cs_proving_key_out, r1cs_verification_key_out, public_key_output, secret_key_output,
-            verification_key_output, eid_output, rt_output, merkle_tree_output);
+            eid_field, rt_field, hashes_array_vector,
+            eid_output, rt_output, merkle_tree_output);
     logln("Marshalling finished." );
 }
 

@@ -105,7 +105,7 @@ if(APPLE OR NOT ${CMAKE_TARGET_ARCHITECTURE} STREQUAL ${CMAKE_HOST_SYSTEM_PROCES
 elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set_target_properties(${CURRENT_PROJECT_NAME} PROPERTIES
                           COMPILE_FLAGS "-s USE_BOOST_HEADERS=1 --memoryprofiler"
-                          LINK_FLAGS "-s USE_BOOST_HEADERS=1  --memoryprofiler -s EXPORTED_FUNCTIONS=_free,_generate_voter_keypair,_init_election,_generate_vote,_tally_votes,_verify_tally -s EXPORTED_RUNTIME_METHODS=ccall,cwrap -s LLD_REPORT_UNDEFINED -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
+                          LINK_FLAGS "-s USE_BOOST_HEADERS=1  --memoryprofiler -s EXPORTED_FUNCTIONS=_free,_generate_voter_keypair,_init_election,_admin_keygen,_generate_vote,_tally_votes,_verify_tally -s EXPORTED_RUNTIME_METHODS=ccall,cwrap -s LLD_REPORT_UNDEFINED -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
                           LINK_DIRECTORIES "${CMAKE_BINARY_DIR}/libs/boost/src/boost/stage/lib")
 
     add_dependencies(${CURRENT_PROJECT_NAME} boost)

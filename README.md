@@ -65,8 +65,19 @@ mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make cli
 ```
+### Building WASM
+* Install [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html)
+* Then
+```shell
+mkdir build-wasm && cd build-wasm
 
-## Usage
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/path/to/emsdk/upstream/emscripten/emcc -DCMAKE_CXX_COMPILER=/path/to/emsdk/upstream/emscripten/em++ -DCMAKE_CROSSCOMPILING_EMULATOR=node -DCMAKE_TOOLCHAIN_FILE=/path/to/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DBUILD_TESTS=FALSE ..
+
+make cli
+
+```
+
+## CLI Usage
 
 Let's consider voting session consisting of the session administrator and 4 voters.
 

@@ -102,15 +102,12 @@ exports.generate_voter_keypair = function() {
 
 /**
  * 
- * @typedef {Object} ElectionConfig
+ * @typedef {Object} AdminKeys
  * @property {Uint8Array} r1cs_proving_key
  * @property {Uint8Array} r1cs_verification_key
  * @property {Uint8Array} public_key
  * @property {Uint8Array} secret_key
  * @property {Uint8Array} verification_key
- * @property {Uint8Array} eid
- * @property {Uint8Array} rt
- * @property {Uint8Array} merkle_tree
  */
 
 const eid_len = 64;
@@ -118,47 +115,31 @@ const eid_len = 64;
 /**
  * @param {number} tree_depth
  * @param {number} eid_bits
- * @param {Uint8Array[]} public_keys
  * 
- * @returns {ElectionConfig}
+ * @returns {AdminKeys}
  */
-exports.init_election = function (tree_depth, public_keys) {
-    public_keys_super_buffer = Uint8ArrayArrayToSuperBufferPtr(public_keys);
-    
+exports.admin_keygen = function (tree_depth) {    
     r1cs_proving_key_bptr = cli._malloc(8);
     r1cs_verification_key_bptr = cli._malloc(8);
     public_key_bptr = cli._malloc(8);
     secret_key_bptr = cli._malloc(8);
-    verification_key_bptr = cli._malloc(8);
-    eid_bptr = cli._malloc(8);
-    rt_bptr = cli._malloc(8);
-    merkle_tree_bptr = cli._malloc(8);
-    
+    verification_key_bptr = cli._malloc(8);    
 
-    cli._init_election(tree_depth, eid_len, public_keys_super_buffer,
+    cli._admin_keygen(tree_depth, eid_len,
                        r1cs_proving_key_bptr, r1cs_verification_key_bptr,
-                       public_key_bptr, secret_key_bptr, verification_key_bptr,
-                       eid_bptr, rt_bptr, merkle_tree_bptr);
+                       public_key_bptr, secret_key_bptr, verification_key_bptr);
     
     r1cs_proving_key_blob = BufferPtrToUint8ArrayAndFree(r1cs_proving_key_bptr);
     r1cs_verification_key_blob = BufferPtrToUint8ArrayAndFree(r1cs_verification_key_bptr);
     public_key_blob = BufferPtrToUint8ArrayAndFree(public_key_bptr);
     secret_key_blob = BufferPtrToUint8ArrayAndFree(secret_key_bptr);
     verification_key_blob = BufferPtrToUint8ArrayAndFree(verification_key_bptr);
-    eid_blob = BufferPtrToUint8ArrayAndFree(eid_bptr);
-    rt_blob = BufferPtrToUint8ArrayAndFree(rt_bptr);
-    merkle_tree_blob = BufferPtrToUint8ArrayAndFree(merkle_tree_bptr);
-    
-    freeSuperBuffer(public_keys_super_buffer);
-    cli._free(public_keys_super_buffer);
+
     cli._free(r1cs_proving_key_bptr);
     cli._free(r1cs_verification_key_bptr);
     cli._free(public_key_bptr);
     cli._free(secret_key_bptr);
     cli._free(verification_key_bptr);
-    cli._free(eid_bptr);
-    cli._free(rt_bptr);
-    cli._free(merkle_tree_bptr);
     
     return {
         r1cs_proving_key: r1cs_proving_key_blob,
@@ -166,6 +147,45 @@ exports.init_election = function (tree_depth, public_keys) {
         public_key: public_key_blob,
         secret_key: secret_key_blob,
         verification_key: verification_key_blob,
+    };
+}
+
+/**
+ * 
+ * @typedef {Object} ElectionConfig
+ * @property {Uint8Array} eid
+ * @property {Uint8Array} rt
+ * @property {Uint8Array} merkle_tree
+ */
+
+/**
+ * @param {number} tree_depth
+ * @param {Uint8Array[]} public_keys
+ * 
+ * @returns {ElectionConfig}
+ */
+ exports.init_election = function (tree_depth, public_keys) {
+    public_keys_super_buffer = Uint8ArrayArrayToSuperBufferPtr(public_keys);
+    
+    eid_bptr = cli._malloc(8);
+    rt_bptr = cli._malloc(8);
+    merkle_tree_bptr = cli._malloc(8);
+    
+
+    cli._init_election(tree_depth, eid_len, public_keys_super_buffer,
+                       eid_bptr, rt_bptr, merkle_tree_bptr);
+    
+    eid_blob = BufferPtrToUint8ArrayAndFree(eid_bptr);
+    rt_blob = BufferPtrToUint8ArrayAndFree(rt_bptr);
+    merkle_tree_blob = BufferPtrToUint8ArrayAndFree(merkle_tree_bptr);
+    
+    freeSuperBuffer(public_keys_super_buffer);
+    cli._free(public_keys_super_buffer);
+    cli._free(eid_bptr);
+    cli._free(rt_bptr);
+    cli._free(merkle_tree_bptr);
+    
+    return {
         eid: eid_blob,
         rt: rt_blob,
         merkle_tree: merkle_tree_blob

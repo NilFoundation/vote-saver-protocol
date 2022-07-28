@@ -379,11 +379,15 @@ void test() {
     std::vector<std::uint8_t> merkle_tree_output;
 
 
-    process_encrypted_input_mode_init_admin_phase(
-            tree_depth, eid_bits, public_keys,
+    process_encrypted_input_mode_init_admin_phase_generate_keys(
+            tree_depth, eid_bits,
             r1cs_proving_key_out, r1cs_verification_key_out,
             public_key_output, secret_key_output,
-            verification_key_output, eid_output,
+            verification_key_output);
+
+    process_encrypted_input_mode_init_admin_phase_generate_data(
+            tree_depth, eid_bits, public_keys,
+            eid_output,
             rt_output, merkle_tree_output);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -518,10 +522,18 @@ int main(int argc, char *argv[]) {
             auto public_keys = marshaling_policy::read_voters_public_keys(
                     tree_depth, vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "");
 
-            process_encrypted_input_mode_init_admin_phase(tree_depth, vm["eid-bits"].as<std::size_t>(), public_keys,
-                                                          r1cs_proving_key_out, r1cs_verification_key_out,
-                                                          public_key_output, secret_key_output, verification_key_output,
-                                                          eid_output, rt_output, merkle_tree_output);
+            std::size_t eid_bits = vm["eid-bits"].as<std::size_t>();
+            process_encrypted_input_mode_init_admin_phase_generate_keys(
+                tree_depth, eid_bits,
+                r1cs_proving_key_out, r1cs_verification_key_out,
+                public_key_output, secret_key_output,
+                verification_key_output);
+
+            process_encrypted_input_mode_init_admin_phase_generate_data(
+                tree_depth, eid_bits, public_keys,
+                eid_output,
+                rt_output, merkle_tree_output);
+
             if (vm.count("r1cs-proving-key-output")) {
                 auto filename = vm["r1cs-proving-key-output"].as<std::string>() + ".bin";
                 marshaling_policy::write_obj(std::filesystem::path(filename), {r1cs_proving_key_out});

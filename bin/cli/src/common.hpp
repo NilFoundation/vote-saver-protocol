@@ -455,16 +455,13 @@ struct marshaling_policy {
         }
     }
 
-    static void serialize_data(std::size_t proof_idx, const verification_key_type &vk_crs,
-                               const elgamal_public_key_type &pk_eid, const proof_type &proof,
+    static void serialize_data(std::size_t proof_idx, const proof_type &proof,
                                const primary_input_type &pinput,
                                const encrypted_input_policy::encryption_scheme_type::cipher_type::first_type &ct,
-                               const primary_input_type &eid, const primary_input_type &sn,
-                               const primary_input_type &rt, std::vector<std::uint8_t> &proof_blob,
+                               const primary_input_type &sn,
+                               std::vector<std::uint8_t> &proof_blob,
                                std::vector<std::uint8_t> &pinput_blob, std::vector<std::uint8_t> &ct_blob,
-                               std::vector<std::uint8_t> &eid_blob, std::vector<std::uint8_t> &sn_blob,
-                               std::vector<std::uint8_t> &rt_blob, std::vector<std::uint8_t> &vk_crs_blob,
-                               std::vector<std::uint8_t> &pk_eid_blob) {
+                               std::vector<std::uint8_t> &sn_blob) {
         proof_blob = serialize_obj<r1cs_proof_marshaling_type>(
                 proof,
                 std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_proof<proof_type, endianness>));
@@ -479,29 +476,10 @@ struct marshaling_policy {
                 std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_encrypted_primary_input<
                               encrypted_input_policy::encryption_scheme_type::cipher_type::first_type, endianness>));
 
-        eid_blob = serialize_obj<pinput_marshaling_type>(
-                eid,
-                std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
-                              endianness>));
-
         sn_blob = serialize_obj<pinput_marshaling_type>(
                 sn,
                 std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
                               endianness>));
-
-        rt_blob = serialize_obj<pinput_marshaling_type>(
-                rt,
-                std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<primary_input_type,
-                              endianness>));
-
-        vk_crs_blob = serialize_obj<r1cs_verification_key_marshaling_type>(
-                vk_crs,
-                std::function(
-                        nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_verification_key<verification_key_type,
-                        endianness>));
-        pk_eid_blob = serialize_obj<public_key_marshaling_type>(
-                pk_eid,
-                std::function(nil::crypto3::marshalling::types::fill_public_key<elgamal_public_key_type, endianness>));
     }
 
     static void
@@ -654,7 +632,7 @@ struct marshaling_policy {
         return containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity>(1 << tree_depth, hashes.begin(), hashes.end());
     }
 
-    static std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> read_voters_public_keys(std::size_t tree_depth,
+    static std::vector<std::vector<std::uint8_t>> read_voters_public_keys_blobs(std::size_t tree_depth,
                                                                                                           const std::string &voter_public_key_output) {
         std::size_t participants_number = 1 << tree_depth;
         std::vector<std::vector<std::uint8_t>> blobs;
@@ -664,6 +642,12 @@ struct marshaling_policy {
                 blobs.emplace_back(read_obj(voter_public_key_output + std::to_string(i) + ".bin"));
             }
         }
+        return blobs;
+    }
+
+    static std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> read_voters_public_keys(std::size_t tree_depth,
+                                                                                                          const std::string &voter_public_key_output) {
+        auto blobs = read_voters_public_keys_blobs(tree_depth, voter_public_key_output);
         return deserialize_voters_public_keys(tree_depth, blobs);
     }
 
@@ -938,10 +922,13 @@ void process_encrypted_input_mode_init_admin_phase_generate_keys(
 }
 
 void process_encrypted_input_mode_init_admin_phase_generate_data(
-        std::size_t tree_depth, std::size_t eid_bits, const std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> &public_keys,
+        std::size_t tree_depth, std::size_t eid_bits, const std::vector<std::vector<std::uint8_t>> &public_keys_blobs,
         std::vector<std::uint8_t> &eid_output,
         std::vector<std::uint8_t> &rt_output, std::vector<std::uint8_t> &merkle_tree_output) {
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
+
+    auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, public_keys_blobs);
+    logln("Finished deserialization of public keys" );
 
     logln("Administrator pre-initializes voting session..." , "\n");
 
@@ -980,15 +967,28 @@ void process_encrypted_input_mode_init_admin_phase_generate_data(
 // #define DEBUG_VERIFY_BALLOT
 
 void process_encrypted_input_mode_vote_phase(
-        std::size_t tree_depth, std::size_t eid_bits, std::size_t voter_idx, std::size_t vote, const containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> &tree,
-        const std::vector<typename marshaling_policy::scalar_field_value_type> &admin_rt_field,
-        const std::vector<typename marshaling_policy::scalar_field_value_type> &eid_field, std::array<bool, encrypted_input_policy::secret_key_bits> &sk,
-        const typename marshaling_policy::elgamal_public_key_type &pk_eid,
-        const typename encrypted_input_policy::proof_system::keypair_type &gg_keypair,
+        std::size_t tree_depth, std::size_t eid_bits, std::size_t voter_idx, std::size_t vote, const std::vector<std::uint8_t> &merkle_tree_blob,
+        const std::vector<std::uint8_t> &rt_blob,
+        const std::vector<std::uint8_t> &eid_blob,
+        const std::vector<std::uint8_t> &sk_blob,
+        const std::vector<std::uint8_t> &pk_eid_blob,
+        const std::vector<std::uint8_t> &proving_key_blob,
+        const std::vector<std::uint8_t> &verification_key_blob,
         std::vector<std::uint8_t> &proof_blob, std::vector<std::uint8_t> &pinput_blob, std::vector<std::uint8_t> &ct_blob,
-        std::vector<std::uint8_t> &eid_blob, std::vector<std::uint8_t> &sn_blob, std::vector<std::uint8_t> &rt_blob,
-        std::vector<std::uint8_t> &vk_crs_blob, std::vector<std::uint8_t> &pk_eid_blob) {
+        std::vector<std::uint8_t> &sn_blob) {
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
+
+    auto tree = marshaling_policy::deserialize_merkle_tree(tree_depth, merkle_tree_blob);
+    auto admin_rt_field = marshaling_policy::deserialize_scalar_vector(rt_blob);
+    auto eid_field = marshaling_policy::deserialize_scalar_vector(eid_blob);
+    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(sk_blob);
+    auto pk_eid = marshaling_policy::deserialize_pk_eid(pk_eid_blob);
+
+    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
+            marshaling_policy::deserialize_pk_crs(proving_key_blob),
+            marshaling_policy::deserialize_vk_crs(verification_key_blob)};
+
+    logln("Finished deserialization of merkle_tree,rt,eid,sk,pk_eid,proving_key,verification_key");
 
     std::size_t participants_number = 1 << tree_depth;
     std::vector<bool> eid;
@@ -1131,17 +1131,13 @@ void process_encrypted_input_mode_vote_phase(
     std::size_t rt_offset_end = rt_offset + root_packed.size();
     typename encrypted_input_policy::proof_system::primary_input_type pinput = bp.primary_input();
     marshaling_policy::serialize_data(
-            proof_idx, gg_keypair.second, pk_eid, rerand_cipher_text.second,
+            proof_idx, rerand_cipher_text.second,
             typename encrypted_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + eid_offset,
                                                                                std::cend(pinput)},
             rerand_cipher_text.first,
-            typename encrypted_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + eid_offset,
-                                                                               std::cbegin(pinput) + sn_offset},
             typename encrypted_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + sn_offset,
                                                                                std::cbegin(pinput) + rt_offset},
-            typename encrypted_input_policy::proof_system::primary_input_type {std::cbegin(pinput) + rt_offset,
-                                                                               std::cbegin(pinput) + rt_offset_end},
-            proof_blob, pinput_blob, ct_blob, eid_blob, sn_blob, rt_blob, vk_crs_blob, pk_eid_blob);
+            proof_blob, pinput_blob, ct_blob, sn_blob);
     logln("Marshalling finished." );
 #ifdef DEBUG_VERIFY_BALLOT
     logln("Sender verifies rerandomized encrypted ballot and proof..." );
@@ -1159,12 +1155,32 @@ void process_encrypted_input_mode_vote_phase(
 
 void process_encrypted_input_mode_tally_admin_phase(
         std::size_t tree_depth,
-        const std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> &cts,
-        const typename marshaling_policy::elgamal_private_key_type &sk_eid,
-        const typename marshaling_policy::elgamal_verification_key_type &vk_eid,
-        const typename encrypted_input_policy::proof_system::keypair_type &gg_keypair,
+        const std::vector<std::vector<std::uint8_t>> &cts_blobs,
+        const std::vector<std::uint8_t> &sk_eid_blob,
+        const std::vector<std::uint8_t> &vk_eid_blob,
+        const std::vector<std::uint8_t> &pk_crs_blob,
+        const std::vector<std::uint8_t> &vk_crs_blob,
         std::vector<std::uint8_t> &dec_proof_blob,
         std::vector<std::uint8_t> &voting_res_blob) {
+
+    logln("tally votes begin deserialization" );
+
+    auto sk_eid = marshaling_policy::deserialize_sk_eid(sk_eid_blob);
+    auto vk_eid = marshaling_policy::deserialize_vk_eid(vk_eid_blob);
+    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
+            marshaling_policy::deserialize_pk_crs(pk_crs_blob), marshaling_policy::deserialize_vk_crs(vk_crs_blob)};
+    logln("tally votes begin cts deserialization" );
+
+    std::size_t participants_number = 1 << tree_depth;
+    BOOST_ASSERT(cts_blobs.size() <= participants_number);
+    std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
+    cts.reserve(cts_blobs.size());
+    for (auto proof_idx = 0; proof_idx < cts_blobs.size(); proof_idx++) {
+    cts.push_back(marshaling_policy::deserialize_ct(cts_blobs[proof_idx]));
+    }
+
+    logln("tally votes finished deserialization" );
+
     logln("Administrator processes tally phase - aggregates encrypted ballots, decrypts aggregated ballot, "
           "generate decryption proof...", "\n");
 
@@ -1201,15 +1217,35 @@ void process_encrypted_input_mode_tally_admin_phase(
 
 bool process_encrypted_input_mode_tally_voter_phase(
         std::size_t tree_depth,
-        const std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> &cts,
-        const typename marshaling_policy::elgamal_verification_key_type &vk_eid,
-        const typename encrypted_input_policy::proof_system::keypair_type &gg_keypair,
-        const std::vector<typename marshaling_policy::scalar_field_value_type> &voting_result,
-        const typename encrypted_input_policy::encryption_scheme_type::decipher_type::second_type &dec_proof) {
+        const std::vector<std::vector<std::uint8_t>> &cts_blobs,
+        const std::vector<std::uint8_t> &vk_eid_blob,
+        const std::vector<std::uint8_t> &pk_crs_blob,
+        const std::vector<std::uint8_t> &vk_crs_blob,
+        const std::vector<std::uint8_t> &voting_res_blob,
+        const std::vector<std::uint8_t> &dec_proof_blob) {
+    
+    logln("verify tally begin deserialization" );
+
+    auto vk_eid = marshaling_policy::deserialize_vk_eid(vk_eid_blob);
+    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
+            marshaling_policy::deserialize_pk_crs(pk_crs_blob), marshaling_policy::deserialize_vk_crs(vk_crs_blob)};
+
+    auto voting_result = marshaling_policy::deserialize_scalar_vector(voting_res_blob);
+    auto dec_proof = marshaling_policy::deserialize_decryption_proof(dec_proof_blob);
+
+    logln("verify tally begin cts deserialization" );
+    std::size_t participants_number = 1 << tree_depth;
+    BOOST_ASSERT(cts_blobs.size() <= participants_number);
+    std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
+    cts.reserve(cts_blobs.size());
+    for (auto proof_idx = 0; proof_idx < cts_blobs.size(); proof_idx++) {
+    cts.push_back(marshaling_policy::deserialize_ct(cts_blobs[proof_idx]));
+    }
+
+    logln("verify tally finished deserialization" );
+    
     logln("Voter processes tally phase - aggregates encrypted ballots, verifies voting result using decryption "
           "proof...", "\n");
-
-    std::size_t participants_number = 1 << tree_depth;
 
     auto ct_agg = cts[0];
     for (auto proof_idx = 1; proof_idx < cts.size(); proof_idx++) {

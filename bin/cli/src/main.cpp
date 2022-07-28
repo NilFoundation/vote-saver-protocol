@@ -31,6 +31,7 @@ namespace boost {
     }
 }    // namespace boost
 
+/*
 void process_encrypted_input_mode(const boost::program_options::variables_map &vm) {
     using scalar_field_value_type = typename encrypted_input_policy::pairing_curve_type::scalar_field_type::value_type;
 
@@ -353,6 +354,7 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
     BOOST_ASSERT(dec_verification_ans);
     std::cout << "Verification of the deciphered tally result succeeded." << std::endl;
 }
+*/
 
 void test() {
     std::size_t tree_depth = 5;
@@ -366,8 +368,6 @@ void test() {
         process_encrypted_input_mode_init_voter_phase(i, pks[i], sks[i]);
     }
 
-    const std::vector<std::array<bool, encrypted_input_policy::public_key_bits>> public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, pks);
-
     std::vector<std::uint8_t> r1cs_proving_key_out;
     std::vector<std::uint8_t> r1cs_verification_key_out;
 
@@ -378,7 +378,6 @@ void test() {
     std::vector<std::uint8_t> rt_output;
     std::vector<std::uint8_t> merkle_tree_output;
 
-
     process_encrypted_input_mode_init_admin_phase_generate_keys(
             tree_depth, eid_bits,
             r1cs_proving_key_out, r1cs_verification_key_out,
@@ -386,7 +385,7 @@ void test() {
             verification_key_output);
 
     process_encrypted_input_mode_init_admin_phase_generate_data(
-            tree_depth, eid_bits, public_keys,
+            tree_depth, eid_bits, pks,
             eid_output,
             rt_output, merkle_tree_output);
 
@@ -394,55 +393,29 @@ void test() {
 
     std::size_t voter_idx = 0;
     std::size_t vote = 1;
-    auto rt_field = marshaling_policy::deserialize_scalar_vector(rt_output);
-    std::cout << "Vote Phase Time_execution: (1)" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() << "ms" << std::endl;
-
-    auto eid_field = marshaling_policy::deserialize_scalar_vector(eid_output);
-    std::cout << "Vote Phase Time_execution: (2)" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() << "ms" << std::endl;
-
-    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(sks[voter_idx]);
-    std::cout << "Vote Phase Time_execution: (3)" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() << "ms" << std::endl;
-    auto pk_eid = marshaling_policy::deserialize_pk_eid(public_key_output);
-    std::cout << "Vote Phase Time_execution: (4)" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() << "ms" << std::endl;
-
-    auto r1cs_proving_key =  marshaling_policy::deserialize_pk_crs(r1cs_proving_key_out);
-    std::cout << "Vote Phase Time_execution: (5)" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() << "ms" << std::endl;
-    auto r1cs_verification_key = marshaling_policy::deserialize_vk_crs(r1cs_verification_key_out);
-    std::cout << "Vote Phase Time_execution: (6)" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() << "ms" << std::endl;
-
-    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
-            r1cs_proving_key,
-            r1cs_verification_key
-    };
-    std::cout << "Vote Phase Time_execution: (7)" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() << "ms" << std::endl;
-
 
     std::vector<std::uint8_t> proof_blob;
     std::vector<std::uint8_t> pinput_blob;
     std::vector<std::uint8_t> ct_blob;
-    std::vector<std::uint8_t> eid_blob;
     std::vector<std::uint8_t> sn_blob;
-    std::vector<std::uint8_t> rt_blob;
-    std::vector<std::uint8_t> vk_crs_blob;
-    std::vector<std::uint8_t> pk_eid_blob;
-
-    containers::merkle_tree<encrypted_input_policy::merkle_hash_type, encrypted_input_policy::arity> tree = marshaling_policy::deserialize_merkle_tree(tree_depth, merkle_tree_output);
 
     process_encrypted_input_mode_vote_phase(
-            tree_depth, eid_bits, voter_idx, vote, tree,
-            rt_field,
-            eid_field, sk,
-            pk_eid,
-            gg_keypair,
+            tree_depth, eid_bits, voter_idx, vote, merkle_tree_output,
+            rt_output,
+            eid_output, secret_key_output,
+            public_key_output,
+            r1cs_proving_key_out,
+            verification_key_output,
             proof_blob, pinput_blob, ct_blob,
-            eid_blob, sn_blob, rt_blob,
-            vk_crs_blob, pk_eid_blob);
+            sn_blob);
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
     std::cout << "Vote Phase Time_execution: " << duration.count() << "ms" << std::endl;
 
 }
 
 int main(int argc, char *argv[]) {
+    test();
+/*
     srand_once();
     boost::program_options::options_description desc(
             "R1CS Generic Group PreProcessing Zero-Knowledge Succinct Non-interactive ARgument of Knowledge "
@@ -519,7 +492,7 @@ int main(int argc, char *argv[]) {
             std::vector<std::uint8_t> rt_output;
             std::vector<std::uint8_t> merkle_tree_output;
 
-            auto public_keys = marshaling_policy::read_voters_public_keys(
+            auto public_keys_blobs = marshaling_policy::read_voters_public_keys_blobs(
                     tree_depth, vm.count("voter-public-key-output") ? vm["voter-public-key-output"].as<std::string>() : "");
 
             std::size_t eid_bits = vm["eid-bits"].as<std::size_t>();
@@ -529,8 +502,9 @@ int main(int argc, char *argv[]) {
                 public_key_output, secret_key_output,
                 verification_key_output);
 
+
             process_encrypted_input_mode_init_admin_phase_generate_data(
-                tree_depth, eid_bits, public_keys,
+                tree_depth, eid_bits, public_keys_blobs,
                 eid_output,
                 rt_output, merkle_tree_output);
 
@@ -681,5 +655,6 @@ int main(int argc, char *argv[]) {
             return 0;
         }
     }
+*/
     return 0;
 }

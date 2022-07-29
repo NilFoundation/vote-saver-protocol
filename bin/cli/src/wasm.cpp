@@ -102,15 +102,11 @@ void init_election(std::size_t tree_depth, std::size_t eid_bits,
     std::vector<std::uint8_t> rt_blob;
     std::vector<std::uint8_t> merkle_tree_blob;
 
-    auto blobs = super_buffer_to_blobs(public_keys_super_buffer);
+    auto public_keys_blobs = super_buffer_to_blobs(public_keys_super_buffer);
     logln("Finished conversion from buffer to blobs of public keys" );
 
-    auto public_keys = marshaling_policy::deserialize_voters_public_keys(tree_depth, blobs);
-
-    logln("Finished deserialization of public keys" );
-
     process_encrypted_input_mode_init_admin_phase_generate_data(
-            tree_depth, eid_bits, public_keys,
+            tree_depth, eid_bits, public_keys_blobs,
             eid_blob,
             rt_blob, merkle_tree_blob);
 
@@ -147,21 +143,8 @@ void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t vot
 
     logln("Finished conversion of merkle_tree,rt,eid,sk,pk_eid,proving_key,verification_key from buffer to blob");
 
-    auto merkle_tree = marshaling_policy::deserialize_merkle_tree(tree_depth, merkle_tree_blob);
-    auto rt_field = marshaling_policy::deserialize_scalar_vector(rt_blob);
-    auto eid_field = marshaling_policy::deserialize_scalar_vector(eid_blob);
-    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(sk_blob);
-    auto pk_eid = marshaling_policy::deserialize_pk_eid(pk_eid_blob);
-
-    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
-            marshaling_policy::deserialize_pk_crs(proving_key_blob),
-            marshaling_policy::deserialize_vk_crs(verification_key_blob)};
-
-    logln("Finished deserialization of merkle_tree,rt,eid,sk,pk_eid,proving_key,verification_key");
-
-    process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, merkle_tree, rt_field, eid_field, sk, pk_eid, gg_keypair,
-                                            proof_blob_out, pinput_blob_out, ct_blob_out, eid_blob_out, sn_blob_out,
-                                            rt_blob_out, vk_crs_blob_out, pk_eid_blob_out);
+    process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, merkle_tree_blob, rt_blob, eid_blob, sk_blob, pk_eid_blob, proving_key_blob, verification_key_blob,
+                                            proof_blob_out, pinput_blob_out, ct_blob_out, sn_blob_out);
 
     *proof_buffer_out = blob_to_buffer(proof_blob_out);
     *pinput_buffer_out = blob_to_buffer(pinput_blob_out);
@@ -178,8 +161,6 @@ void tally_votes(std::size_t tree_depth,
 buffer<char> *const dec_proof_buffer_out,
         buffer<char> *const voting_res_buffer_out) {
 
-logln("tally votes begin deserialization" );
-
 std::vector<std::uint8_t> sk_eid_blob = buffer_to_blob(sk_eid_buffer);
 std::vector<std::uint8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
 std::vector<std::uint8_t> pk_crs_blob = buffer_to_blob(pk_crs_buffer);
@@ -188,27 +169,12 @@ std::vector<std::vector<std::uint8_t>> cts_blobs = super_buffer_to_blobs(cts_sup
 
 logln("tally votes finished converting from buffers to blobs" );
 
-
-auto sk_eid = marshaling_policy::deserialize_sk_eid(sk_eid_blob);
-auto vk_eid = marshaling_policy::deserialize_vk_eid(vk_eid_blob);
-typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
-        marshaling_policy::deserialize_pk_crs(pk_crs_blob), marshaling_policy::deserialize_vk_crs(vk_crs_blob)};
-logln("tally votes begin cts deserialization" );
-std::size_t participants_number = 1 << tree_depth;
-BOOST_ASSERT(cts_blobs.size() <= participants_number);
-std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
-cts.reserve(cts_blobs.size());
-for (auto proof_idx = 0; proof_idx < cts_blobs.size(); proof_idx++) {
-cts.push_back(marshaling_policy::deserialize_ct(cts_blobs[proof_idx]));
-}
-
-logln("tally votes finished deserialization" );
-
 std::vector<std::uint8_t> dec_proof_blob;
 std::vector<std::uint8_t> voting_res_blob;
 
-process_encrypted_input_mode_tally_admin_phase(tree_depth, cts, sk_eid, vk_eid, gg_keypair, dec_proof_blob,
-        voting_res_blob);
+process_encrypted_input_mode_tally_admin_phase(tree_depth, cts_blobs, sk_eid_blob,
+                                               vk_eid_blob, pk_crs_blob, vk_crs_blob, dec_proof_blob,
+                                               voting_res_blob);
 logln("tally votes begin blobs to buffers conversion" );
 
 *dec_proof_buffer_out = blob_to_buffer(dec_proof_blob);
@@ -225,8 +191,6 @@ const buffer<char> *const vk_crs_buffer,
         buffer<char> *const dec_proof_buffer,
 buffer<char> *const voting_res_buffer
 ) {
-logln("verify tally begin deserialization" );
-
 std::vector<std::uint8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
 std::vector<std::uint8_t> pk_crs_blob = buffer_to_blob(pk_crs_buffer);
 std::vector<std::uint8_t> vk_crs_blob = buffer_to_blob(vk_crs_buffer);
@@ -236,26 +200,8 @@ std::vector<std::vector<std::uint8_t>> cts_blobs = super_buffer_to_blobs(cts_sup
 
 logln("verify tally finished converting from buffers to blobs" );
 
-auto vk_eid = marshaling_policy::deserialize_vk_eid(vk_eid_blob);
-typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
-        marshaling_policy::deserialize_pk_crs(pk_crs_blob), marshaling_policy::deserialize_vk_crs(vk_crs_blob)};
-
-auto voting_result = marshaling_policy::deserialize_scalar_vector(voting_res_blob);
-auto dec_proof = marshaling_policy::deserialize_decryption_proof(dec_proof_blob);
-
-logln("verify tally begin cts deserialization" );
-std::size_t participants_number = 1 << tree_depth;
-BOOST_ASSERT(cts_blobs.size() <= participants_number);
-std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
-cts.reserve(cts_blobs.size());
-for (auto proof_idx = 0; proof_idx < cts_blobs.size(); proof_idx++) {
-cts.push_back(marshaling_policy::deserialize_ct(cts_blobs[proof_idx]));
-}
-
-logln("verify tally finished deserialization" );
-
-bool is_tally_valid = process_encrypted_input_mode_tally_voter_phase(tree_depth, cts, vk_eid, gg_keypair, voting_result,
-                                                                     dec_proof);
+bool is_tally_valid = process_encrypted_input_mode_tally_voter_phase(tree_depth, cts_blobs, vk_eid_blob, pk_crs_blob, vk_crs_blob, voting_res_blob,
+                                                                     dec_proof_blob);
 
 logln((is_tally_valid ? "tally is valid": "tally is invalid"));
 

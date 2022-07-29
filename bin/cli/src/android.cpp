@@ -100,11 +100,7 @@ Java_com_devoteusa_devote_DeVoteJNI_generateVote(JNIEnv *env, jobject thiz, jint
     std::vector<std::uint8_t> proof_blob_out;
     std::vector<std::uint8_t> pinput_blob_out;
     std::vector<std::uint8_t> ct_blob_out;
-    std::vector<std::uint8_t> eid_blob_out;
     std::vector<std::uint8_t> sn_blob_out;
-    std::vector<std::uint8_t> rt_blob_out;
-    std::vector<std::uint8_t> vk_crs_blob_out;
-    std::vector<std::uint8_t> pk_eid_blob_out;
 
     auto merkle_tree_blob = read_buffer(env, merkle_tree_buffer);
     auto rt_blob = read_buffer(env, rt_buffer);
@@ -114,19 +110,10 @@ Java_com_devoteusa_devote_DeVoteJNI_generateVote(JNIEnv *env, jobject thiz, jint
     auto proving_key_blob = read_buffer(env, r1cs_proving_key_buffer);
     auto verification_key_blob = read_buffer(env, r1cs_verification_key_buffer);
 
-    auto merkle_tree = marshaling_policy::deserialize_merkle_tree(tree_depth, merkle_tree_blob);
-    auto rt_field = marshaling_policy::deserialize_scalar_vector(rt_blob);
-    auto eid_field = marshaling_policy::deserialize_scalar_vector(eid_blob);
-    auto sk = marshaling_policy::deserialize_bitarray<encrypted_input_policy::secret_key_bits>(sk_blob);
-    auto pk_eid = marshaling_policy::deserialize_pk_eid(pk_eid_blob);
-
-    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
-            marshaling_policy::deserialize_pk_crs(proving_key_blob),
-            marshaling_policy::deserialize_vk_crs(verification_key_blob)};
-
-    process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, merkle_tree, rt_field, eid_field, sk, pk_eid, gg_keypair,
-                                            proof_blob_out, pinput_blob_out, ct_blob_out, eid_blob_out, sn_blob_out,
-                                            rt_blob_out, vk_crs_blob_out, pk_eid_blob_out);
+    process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, merkle_tree_blob,
+                                            rt_blob, eid_blob, sk_blob, pk_eid_blob, proving_key_blob,
+                                            verification_key_blob,
+                                            proof_blob_out, pinput_blob_out, ct_blob_out, sn_blob_out);
 
     write_to_buffer(env, proof_blob_out, proof_buffer_out);
     write_to_buffer(env, pinput_blob_out, pinput_buffer_out);
@@ -150,23 +137,10 @@ JNIEXPORT jboolean Java_com_devoteusa_devote_DeVoteJNI_verifyTally(JNIEnv *env, 
     std::vector<std::uint8_t> voting_res_blob = read_buffer(env, voting_res_buffer);
     std::vector<std::vector<std::uint8_t>> cts_blobs = read_buffer_array(env, cts_buffer_array);
 
-    auto vk_eid = marshaling_policy::deserialize_vk_eid(vk_eid_blob);
-    typename encrypted_input_policy::proof_system::keypair_type gg_keypair = {
-            marshaling_policy::deserialize_pk_crs(pk_crs_blob), marshaling_policy::deserialize_vk_crs(vk_crs_blob)};
+    bool is_tally_valid = process_encrypted_input_mode_tally_voter_phase(
+                            tree_depth, cts_blobs, vk_eid_blob, pk_crs_blob,
+                            vk_crs_blob, voting_res_blob, dec_proof_blob);
 
-    auto voting_result = marshaling_policy::deserialize_scalar_vector(voting_res_blob);
-    auto dec_proof = marshaling_policy::deserialize_decryption_proof(dec_proof_blob);
-
-    std::size_t participants_number = 1 << tree_depth;
-    BOOST_ASSERT(cts_blobs.size() <= participants_number);
-    std::vector<typename encrypted_input_policy::encryption_scheme_type::cipher_type::first_type> cts;
-    cts.reserve(cts_blobs.size());
-    for (auto & cts_blob : cts_blobs) {
-        cts.push_back(marshaling_policy::deserialize_ct(cts_blob));
-    }
-
-    bool is_tally_valid = process_encrypted_input_mode_tally_voter_phase(tree_depth, cts, vk_eid, gg_keypair, voting_result,
-                                                                         dec_proof);
     logln((is_tally_valid ? "tally is valid": "tally is invalid"));
 
     return is_tally_valid;

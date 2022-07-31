@@ -413,8 +413,123 @@ void test() {
 
 }
 
+void generate_test_data(std::size_t tree_depth) {
+    logln("Generating test data for tree depth = ", tree_depth);
+    const std::size_t eid_bits = 64;
+    std::vector<std::uint8_t> r1cs_proving_key_blob;
+    std::vector<std::uint8_t> r1cs_verification_key_blob;
+
+    std::vector<std::uint8_t> public_key_blob;
+    std::vector<std::uint8_t> secret_key_blob;
+    std::vector<std::uint8_t> verification_key_blob;
+    logln("Generating Admin Keys");
+    process_encrypted_input_mode_init_admin_phase_generate_keys(
+            tree_depth, eid_bits,
+            r1cs_proving_key_blob, r1cs_verification_key_blob,
+            public_key_blob, secret_key_blob,
+            verification_key_blob);
+    marshaling_policy::write_obj("r1cs_proving_key.bin", {r1cs_proving_key_blob});
+    marshaling_policy::write_obj("r1cs_verification_key.bin", {r1cs_verification_key_blob});
+    marshaling_policy::write_obj("public_key.bin", {public_key_blob});
+    marshaling_policy::write_obj("secret_key.bin", {secret_key_blob});
+    marshaling_policy::write_obj("verification_key.bin", {verification_key_blob});
+    logln("Written Admin Keys");
+
+
+    logln("Generating Voter Keys");
+    std::vector<std::uint8_t> voter_public_key_blob;
+    std::vector<std::uint8_t> voter_secret_key_blob;
+    process_encrypted_input_mode_init_voter_phase(0, voter_public_key_blob, voter_secret_key_blob);
+    marshaling_policy::write_obj("voter_public_key.bin", {voter_public_key_blob});
+    marshaling_policy::write_obj("voter_secret_key.bin", {voter_secret_key_blob});
+    logln("Written Voter Keys");
+
+    logln("Generating Admin Data");
+    std::vector<std::uint8_t> eid_blob;
+    std::vector<std::uint8_t> rt_blob;
+    std::vector<std::uint8_t> merkle_tree_blob;
+    process_encrypted_input_mode_init_admin_phase_generate_data(
+            tree_depth, eid_bits, {voter_public_key_blob},
+            eid_blob,
+            rt_blob, merkle_tree_blob);
+    marshaling_policy::write_obj("eid.bin", {eid_blob});
+    marshaling_policy::write_obj("rt.bin", {rt_blob});
+    marshaling_policy::write_obj("merkle_tree.bin", {merkle_tree_blob});
+    logln("Written Admin Data");
+
+    logln("Finished generating test data");
+}
+
+void benchmark_vote_pahse(std::size_t tree_depth) {
+    logln("Reading data");
+    auto proving_key = marshaling_policy::read_obj("r1cs_proving_key.bin");
+    auto verification_key = marshaling_policy::read_obj("r1cs_verification_key.bin");
+    auto public_key = marshaling_policy::read_obj("public_key.bin");
+    auto voter_secret_key = marshaling_policy::read_obj("voter_secret_key.bin");
+    auto eid = marshaling_policy::read_obj("eid.bin");
+    auto rt = marshaling_policy::read_obj("rt.bin");
+    auto merkle_tree = marshaling_policy::read_obj("merkle_tree.bin");
+    logln("Running vote phase");
+
+    const std::size_t eid_bits = 64;
+    const std::size_t voter_idx = 0;
+    const std::size_t vote = 0;
+
+    std::vector<std::uint8_t> proof_blob;
+    std::vector<std::uint8_t> pinput_blob;
+    std::vector<std::uint8_t> ct_blob;
+    std::vector<std::uint8_t> sn_blob;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    process_encrypted_input_mode_vote_phase(
+            tree_depth, eid_bits, voter_idx, vote, merkle_tree,
+            rt,
+            eid, voter_secret_key,
+            public_key,
+            proving_key,
+            verification_key,
+            proof_blob, pinput_blob, ct_blob,
+            sn_blob);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
+    std::cout << "Vote Phase Time_execution: " << duration.count() << "ms" << std::endl;
+}
+
 int main(int argc, char *argv[]) {
-    test();
+    boost::program_options::options_description desc(
+            "Vote Phase benchmarking");
+    desc.add_options()
+    ("tree-depth", boost::program_options::value<std::size_t>()->default_value(2), "Depth of Merkle tree built upon participants' public keys.");
+
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(desc).run(), vm);
+    boost::program_options::notify(vm);
+
+    std::size_t tree_depth = vm["tree-depth"].as<std::size_t>();
+
+    std::cout << "tree depth = " << tree_depth <<std::endl;
+
+    std::cout << "Checking if test files exist" << std::endl;
+    std::vector<bool> files_exist {
+        std::filesystem::exists("r1cs_proving_key.bin"),
+        std::filesystem::exists("r1cs_verification_key.bin"),
+        std::filesystem::exists("public_key.bin"),
+        std::filesystem::exists("secret_key.bin"),
+        std::filesystem::exists("verification_key.bin"),
+        std::filesystem::exists("voter_public_key.bin"),
+        std::filesystem::exists("voter_secret_key.bin"),
+        std::filesystem::exists("eid.bin"),
+        std::filesystem::exists("rt.bin"),
+        std::filesystem::exists("merkle_tree.bin"),
+    };
+    if(std::all_of(files_exist.begin(), files_exist.end(), [](bool b){return b;})) {
+        std::cout << "Setup already exists, skipping" <<std::endl;
+    } else {
+        generate_test_data(tree_depth);
+    }
+
+    std::cout << "Benchmarking vote phase" <<std::endl;
+    benchmark_vote_pahse(tree_depth);
 /*
     srand_once();
     boost::program_options::options_description desc(

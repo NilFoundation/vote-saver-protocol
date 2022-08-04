@@ -17,6 +17,7 @@
 //---------------------------------------------------------------------------//
 
 #include "common.hpp"
+#include <filesystem>
 
 namespace boost {
     void assertion_failed(char const *expr, char const *function, char const *file, long line) {
@@ -356,6 +357,33 @@ void process_encrypted_input_mode(const boost::program_options::variables_map &v
 }
 */
 
+template<typename Path, typename Blob>
+static void write_obj(const Path &path, std::initializer_list<Blob> blobs) {
+    if (std::filesystem::exists(path)) {
+        std::cout << "File " << path << " exists and won't be overwritten." << std::endl;
+        return;
+    }
+    std::ofstream out(path, std::ios_base::binary);
+    for (const auto &blob : blobs) {
+        for (const auto b : blob) {
+            out << b;
+        }
+    }
+    out.close();
+}
+
+template<typename Path>
+static std::vector<std::uint8_t> read_obj(const Path &path) {
+    BOOST_ASSERT_MSG(
+            std::filesystem::exists(path),
+            (std::string("File ") + path + std::string(" doesn't exist, make sure you created it!")).c_str());
+    std::ifstream in(path, std::ios_base::binary);
+    std::stringstream buffer;
+    buffer << in.rdbuf();
+    auto blob_str = buffer.str();
+    return {std::cbegin(blob_str), std::cend(blob_str)};
+}
+
 void test() {
     std::size_t tree_depth = 5;
     std::size_t eid_bits = 64;
@@ -428,11 +456,11 @@ void generate_test_data(std::size_t tree_depth) {
             r1cs_proving_key_blob, r1cs_verification_key_blob,
             public_key_blob, secret_key_blob,
             verification_key_blob);
-    marshaling_policy::write_obj("r1cs_proving_key.bin", {r1cs_proving_key_blob});
-    marshaling_policy::write_obj("r1cs_verification_key.bin", {r1cs_verification_key_blob});
-    marshaling_policy::write_obj("public_key.bin", {public_key_blob});
-    marshaling_policy::write_obj("secret_key.bin", {secret_key_blob});
-    marshaling_policy::write_obj("verification_key.bin", {verification_key_blob});
+    write_obj("r1cs_proving_key.bin", {r1cs_proving_key_blob});
+    write_obj("r1cs_verification_key.bin", {r1cs_verification_key_blob});
+    write_obj("public_key.bin", {public_key_blob});
+    write_obj("secret_key.bin", {secret_key_blob});
+    write_obj("verification_key.bin", {verification_key_blob});
     logln("Written Admin Keys");
 
 
@@ -440,8 +468,8 @@ void generate_test_data(std::size_t tree_depth) {
     std::vector<std::uint8_t> voter_public_key_blob;
     std::vector<std::uint8_t> voter_secret_key_blob;
     process_encrypted_input_mode_init_voter_phase(0, voter_public_key_blob, voter_secret_key_blob);
-    marshaling_policy::write_obj("voter_public_key.bin", {voter_public_key_blob});
-    marshaling_policy::write_obj("voter_secret_key.bin", {voter_secret_key_blob});
+    write_obj("voter_public_key.bin", {voter_public_key_blob});
+    write_obj("voter_secret_key.bin", {voter_secret_key_blob});
     logln("Written Voter Keys");
 
     logln("Generating Admin Data");
@@ -452,9 +480,9 @@ void generate_test_data(std::size_t tree_depth) {
             tree_depth, eid_bits, {voter_public_key_blob},
             eid_blob,
             rt_blob, merkle_tree_blob);
-    marshaling_policy::write_obj("eid.bin", {eid_blob});
-    marshaling_policy::write_obj("rt.bin", {rt_blob});
-    marshaling_policy::write_obj("merkle_tree.bin", {merkle_tree_blob});
+    write_obj("eid.bin", {eid_blob});
+    write_obj("rt.bin", {rt_blob});
+    write_obj("merkle_tree.bin", {merkle_tree_blob});
     logln("Written Admin Data");
 
     logln("Finished generating test data");
@@ -462,13 +490,13 @@ void generate_test_data(std::size_t tree_depth) {
 
 void benchmark_vote_pahse(std::size_t tree_depth) {
     logln("Reading data");
-    auto proving_key = marshaling_policy::read_obj("r1cs_proving_key.bin");
-    auto verification_key = marshaling_policy::read_obj("r1cs_verification_key.bin");
-    auto public_key = marshaling_policy::read_obj("public_key.bin");
-    auto voter_secret_key = marshaling_policy::read_obj("voter_secret_key.bin");
-    auto eid = marshaling_policy::read_obj("eid.bin");
-    auto rt = marshaling_policy::read_obj("rt.bin");
-    auto merkle_tree = marshaling_policy::read_obj("merkle_tree.bin");
+    auto proving_key = read_obj("r1cs_proving_key.bin");
+    auto verification_key = read_obj("r1cs_verification_key.bin");
+    auto public_key = read_obj("public_key.bin");
+    auto voter_secret_key = read_obj("voter_secret_key.bin");
+    auto eid = read_obj("eid.bin");
+    auto rt = read_obj("rt.bin");
+    auto merkle_tree = read_obj("merkle_tree.bin");
     logln("Running vote phase");
 
     const std::size_t eid_bits = 64;

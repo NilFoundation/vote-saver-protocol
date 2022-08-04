@@ -6,6 +6,8 @@ include(CMSetupVersion)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     cm_project(devote WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    cm_project(devote WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
 else()
 cm_project(cli WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
 endif()
@@ -32,6 +34,9 @@ elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Android")
     set(Boost_LIBRARIES ${CMAKE_SOURCE_DIR}/../boost/${ANDROID_ABI}/lib/libboost_random.a)
     find_library(log-lib log)
     list(APPEND PLATFORM_SPECIFIC_LIBRARIES ${log-lib})
+elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(Boost_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/../boost/x86_64/include")
+    set(Boost_LIBRARIES ${CMAKE_SOURCE_DIR}/../boost/x86_64/lib/libboost_random.a)
 endif()
 
 cm_setup_version(VERSION 0.1.0)
@@ -48,6 +53,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
             SHARED
             ${${CURRENT_PROJECT_NAME}_HEADERS}
             ${${CURRENT_PROJECT_NAME}_SOURCES})
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
+        src/ios.cpp
+        src/ios.mm)
+    list(APPEND ${CURRENT_PROJECT_NAME}_HEADERS
+        src/ios.hpp
+        src/ios.h)
+
+    add_library(${CURRENT_PROJECT_NAME}
+            SHARED
+            ${${CURRENT_PROJECT_NAME}_HEADERS}
+            ${${CURRENT_PROJECT_NAME}_SOURCES})
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
             src/wasm.cpp)
@@ -56,12 +73,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
             ${${CURRENT_PROJECT_NAME}_HEADERS}
             ${${CURRENT_PROJECT_NAME}_SOURCES})
 else()
-list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
-     src/main.cpp)
+    list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
+        src/main.cpp)
 
-add_executable(${CURRENT_PROJECT_NAME}
-               ${${CURRENT_PROJECT_NAME}_HEADERS}
-               ${${CURRENT_PROJECT_NAME}_SOURCES})
+    add_executable(${CURRENT_PROJECT_NAME}
+                ${${CURRENT_PROJECT_NAME}_HEADERS}
+                ${${CURRENT_PROJECT_NAME}_SOURCES})
 endif()
 
 set_target_properties(${CURRENT_PROJECT_NAME} PROPERTIES
@@ -98,11 +115,7 @@ if(CMAKE_BUILD_TYPE=="Release")
     set(CMAKE_CXX_FLAGS "-O3")
 endif()
 
-if(APPLE OR NOT ${CMAKE_TARGET_ARCHITECTURE} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
-    set_target_properties(${CURRENT_PROJECT_NAME} PROPERTIES
-                          XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "${APPLE_CODE_SIGN_IDENTITY}"
-                          XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM}")
-elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set_target_properties(${CURRENT_PROJECT_NAME} PROPERTIES
                           COMPILE_FLAGS "-s USE_BOOST_HEADERS=1 --memoryprofiler"
                           LINK_FLAGS "-s USE_BOOST_HEADERS=1  --memoryprofiler -s EXPORTED_FUNCTIONS=_free,_generate_voter_keypair,_init_election,_admin_keygen,_generate_vote,_tally_votes,_verify_tally -s EXPORTED_RUNTIME_METHODS=ccall,cwrap -s LLD_REPORT_UNDEFINED -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"

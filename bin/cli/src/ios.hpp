@@ -16,7 +16,7 @@ void process_encrypted_input_mode_vote_phase(
 
 bool process_encrypted_input_mode_tally_voter_phase(
     std::size_t tree_depth,
-    const std::vector<std::vector<std::uint8_t>> &cts_blobs,
+    const std::vector<std::vector<std::uint8_t> > &cts_blobs,
     const std::vector<std::uint8_t> &vk_eid_blob,
     const std::vector<std::uint8_t> &pk_crs_blob,
     const std::vector<std::uint8_t> &vk_crs_blob,

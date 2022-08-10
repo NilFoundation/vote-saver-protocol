@@ -35,8 +35,8 @@ elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Android")
     find_library(log-lib log)
     list(APPEND PLATFORM_SPECIFIC_LIBRARIES ${log-lib})
 elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
-    set(Boost_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/../boost/x86_64/include")
-    set(Boost_LIBRARIES ${CMAKE_SOURCE_DIR}/../boost/x86_64/lib/libboost_random.a)
+    set(Boost_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/../boost/combined/include")
+    set(Boost_LIBRARIES ${CMAKE_SOURCE_DIR}/../boost/combined/lib/libboost_random.a)
 endif()
 
 cm_setup_version(VERSION 0.1.0)
@@ -59,7 +59,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         src/ios.mm)
     list(APPEND ${CURRENT_PROJECT_NAME}_HEADERS
         src/ios.hpp
-        src/ios.h)
+        include/devote_ios.h)
 
     add_library(${CURRENT_PROJECT_NAME}
             SHARED

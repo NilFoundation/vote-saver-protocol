@@ -74,7 +74,7 @@ std::vector<std::vector<std::uint8_t>> read_buffer_array(JNIEnv* env, jobjectArr
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_devoteusa_devote_DeVoteJNI_generateVoterKeypair(JNIEnv * env,
+Java_com_devote_DeVoteJNI_generateVoterKeypair(JNIEnv * env,
                            jobject thiz,
                            jbyteArray pk_out,
                            jbyteArray sk_out) {
@@ -87,7 +87,7 @@ Java_com_devoteusa_devote_DeVoteJNI_generateVoterKeypair(JNIEnv * env,
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_devoteusa_devote_DeVoteJNI_generateVote(JNIEnv *env, jobject thiz, jint tree_depth,
+Java_com_devote_DeVoteJNI_generateVote(JNIEnv *env, jobject thiz, jint tree_depth,
                        jint eid_bits, jint voter_idx, jint vote,
                        jbyteArray merkle_tree_buffer, jbyteArray rt_buffer,
                        jbyteArray eid_buffer, jbyteArray sk_buffer,
@@ -122,7 +122,7 @@ Java_com_devoteusa_devote_DeVoteJNI_generateVote(JNIEnv *env, jobject thiz, jint
 }
 
 extern "C"
-JNIEXPORT jboolean Java_com_devoteusa_devote_DeVoteJNI_verifyTally(JNIEnv *env, jobject thiz,
+JNIEXPORT jboolean Java_com_devote_DeVoteJNI_verifyTally(JNIEnv *env, jobject thiz,
                            jint tree_depth,
                            jobjectArray cts_buffer_array,
                            jbyteArray vk_eid_buffer,

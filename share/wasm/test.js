@@ -7,6 +7,9 @@ function test() {
     keypairs = [];
     public_keys = [];
     for(var i =0; i < num_participants; ++i) {
+        // Voter method:
+        // Android: https://github.com/NoamDev/vote-saver-android/blob/71bb9ded347b66a959bf108de15b2d165bfd983b/app/src/main/java/com/devoteusa/devote/DeVote.kt#L10
+        // iOS: https://github.com/NilFoundation/vote-saver-protocol/blob/66647b1cfd249e1c464364833fab96537b8bbfae/bin/cli/include/devote_ios.h#L2
         keypair = wrapper.generate_voter_keypair();
         keypairs.push(keypair);
         public_keys.push(keypair.public_key);
@@ -17,6 +20,9 @@ function test() {
     for(var i=0; i < num_participants; ++i) {
         vote = (i*3) % 25;
         console.log(`voter ${i} votes ${vote}`);
+        // Voter method:
+        // Android: https://github.com/NoamDev/vote-saver-android/blob/71bb9ded347b66a959bf108de15b2d165bfd983b/app/src/main/java/com/devoteusa/devote/DeVote.kt#L17
+        // iOS: https://github.com/NilFoundation/vote-saver-protocol/blob/66647b1cfd249e1c464364833fab96537b8bbfae/bin/cli/include/devote_ios.h#L4
         vote_data = wrapper.generate_vote(tree_depth, i, vote, election.merkle_tree,
             election.rt, election.eid, keypairs[i].secret_key,
             admin_keys.public_key, admin_keys.r1cs_proving_key, admin_keys.r1cs_verification_key);
@@ -29,6 +35,9 @@ function test() {
     
     console.log(tally_data.voting_res);    
 
+    // Voter/Observer method
+    // Android: https://github.com/NoamDev/vote-saver-android/blob/71bb9ded347b66a959bf108de15b2d165bfd983b/app/src/main/java/com/devoteusa/devote/DeVote.kt#L36
+    // iOS: https://github.com/NilFoundation/vote-saver-protocol/blob/66647b1cfd249e1c464364833fab96537b8bbfae/bin/cli/include/devote_ios.h#L18
     is_tally_valid = wrapper.verify_tally(tree_depth, cts, admin_keys.verification_key,
         admin_keys.r1cs_proving_key, admin_keys.r1cs_verification_key,
         tally_data.dec_proof, tally_data.voting_res);

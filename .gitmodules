@@ -10,7 +10,6 @@
 [submodule "libs/zk"]
 	path = libs/zk
 	url = git@github.com:nilfoundation/crypto3-zk.git
-	branch = 65-update-groth16-implementation
 [submodule "libs/block"]
 	path = libs/block
 	url = git@github.com:nilfoundation/crypto3-block.git

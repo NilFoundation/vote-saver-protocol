@@ -9,7 +9,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     cm_project(devote WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
 else()
-cm_project(cli WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
+    cm_project(cli WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
 endif()
 
 if(NOT CMAKE_CROSSCOMPILING)
@@ -47,38 +47,38 @@ set(${CURRENT_PROJECT_NAME}_HEADERS)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
-            src/android.cpp)
+         src/android.cpp)
 
     add_library(${CURRENT_PROJECT_NAME}
-            SHARED
-            ${${CURRENT_PROJECT_NAME}_HEADERS}
-            ${${CURRENT_PROJECT_NAME}_SOURCES})
-elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-    list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
-        src/ios.cpp
-        src/ios.mm)
-    list(APPEND ${CURRENT_PROJECT_NAME}_HEADERS
-        src/ios.hpp
-        include/devote_ios.h)
-
-    add_library(${CURRENT_PROJECT_NAME}
-            SHARED
-            ${${CURRENT_PROJECT_NAME}_HEADERS}
-            ${${CURRENT_PROJECT_NAME}_SOURCES})
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-    list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
-            src/wasm.cpp)
-
-    add_executable(${CURRENT_PROJECT_NAME}
-            ${${CURRENT_PROJECT_NAME}_HEADERS}
-            ${${CURRENT_PROJECT_NAME}_SOURCES})
-else()
-    list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
-        src/main.cpp)
-
-    add_executable(${CURRENT_PROJECT_NAME}
+                SHARED
                 ${${CURRENT_PROJECT_NAME}_HEADERS}
                 ${${CURRENT_PROJECT_NAME}_SOURCES})
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
+         src/ios.cpp
+         src/ios.mm)
+    list(APPEND ${CURRENT_PROJECT_NAME}_HEADERS
+         include/nil/vote_saver/ios.hpp
+         include/nil/vote_saver/devote_ios.h)
+
+    add_library(${CURRENT_PROJECT_NAME}
+                SHARED
+                ${${CURRENT_PROJECT_NAME}_HEADERS}
+                ${${CURRENT_PROJECT_NAME}_SOURCES})
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
+         src/wasm.cpp)
+
+    add_executable(${CURRENT_PROJECT_NAME}
+                   ${${CURRENT_PROJECT_NAME}_HEADERS}
+                   ${${CURRENT_PROJECT_NAME}_SOURCES})
+else()
+    list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
+         src/main.cpp)
+
+    add_executable(${CURRENT_PROJECT_NAME}
+                   ${${CURRENT_PROJECT_NAME}_HEADERS}
+                   ${${CURRENT_PROJECT_NAME}_SOURCES})
 endif()
 
 set_target_properties(${CURRENT_PROJECT_NAME} PROPERTIES
@@ -111,7 +111,7 @@ target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC
 
                            ${Boost_INCLUDE_DIRS})
 
-if(CMAKE_BUILD_TYPE=="Release")
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_CXX_FLAGS "-O3")
 endif()
 
@@ -122,4 +122,8 @@ if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
                           LINK_DIRECTORIES "${CMAKE_BINARY_DIR}/libs/boost/src/boost/stage/lib")
 
     add_dependencies(${CURRENT_PROJECT_NAME} boost)
+endif()
+
+if(BUILD_TESTS)
+    add_subdirectory(test)
 endif()

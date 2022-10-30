@@ -14,7 +14,7 @@
 // limitations under the License.
 //---------------------------------------------------------------------------//
 
-#include "common.hpp"
+#include "../include/nil/vote_saver/common.hpp"
 
 namespace boost {
     void assertion_failed(char const *expr, char const *function, char const *file, long line) {
@@ -71,21 +71,18 @@ void generate_voter_keypair(buffer<char> *const voter_pk_out, buffer<char> *cons
     *voter_sk_out = blob_to_buffer(voter_sk_blob);
 }
 
-void admin_keygen(std::size_t tree_depth, std::size_t eid_bits,
-                    buffer<char> *const r1cs_proving_key_out, buffer<char> *const r1cs_verification_key_out,
-                    buffer<char> *const public_key_out, buffer<char> *const secret_key_out,
-                    buffer<char> *const verification_key_out) {
+void admin_keygen(std::size_t tree_depth, std::size_t eid_bits, buffer<char> *const r1cs_proving_key_out,
+                  buffer<char> *const r1cs_verification_key_out, buffer<char> *const public_key_out,
+                  buffer<char> *const secret_key_out, buffer<char> *const verification_key_out) {
     std::vector<std::uint8_t> r1cs_proving_key_blob;
     std::vector<std::uint8_t> r1cs_verification_key_blob;
     std::vector<std::uint8_t> public_key_blob;
     std::vector<std::uint8_t> secret_key_blob;
     std::vector<std::uint8_t> verification_key_blob;
 
-    process_encrypted_input_mode_init_admin_phase_generate_keys(
-            tree_depth, eid_bits,
-            r1cs_proving_key_blob, r1cs_verification_key_blob,
-            public_key_blob, secret_key_blob,
-            verification_key_blob);
+    process_encrypted_input_mode_init_admin_phase_generate_keys(tree_depth, eid_bits, r1cs_proving_key_blob,
+                                                                r1cs_verification_key_blob, public_key_blob,
+                                                                secret_key_blob, verification_key_blob);
 
     *r1cs_proving_key_out = blob_to_buffer(r1cs_proving_key_blob);
     *r1cs_verification_key_out = blob_to_buffer(r1cs_verification_key_blob);
@@ -95,20 +92,17 @@ void admin_keygen(std::size_t tree_depth, std::size_t eid_bits,
 }
 
 void init_election(std::size_t tree_depth, std::size_t eid_bits,
-                    const buffer<buffer<char> *const> *const public_keys_super_buffer,
-                    buffer<char> *const eid_out, buffer<char> *const rt_out,
-                    buffer<char> *const merkle_tree_out) {
+                   const buffer<buffer<char> *const> *const public_keys_super_buffer, buffer<char> *const eid_out,
+                   buffer<char> *const rt_out, buffer<char> *const merkle_tree_out) {
     std::vector<std::uint8_t> eid_blob;
     std::vector<std::uint8_t> rt_blob;
     std::vector<std::uint8_t> merkle_tree_blob;
 
     auto public_keys_blobs = super_buffer_to_blobs(public_keys_super_buffer);
-    logln("Finished conversion from buffer to blobs of public keys" );
+    logln("Finished conversion from buffer to blobs of public keys");
 
-    process_encrypted_input_mode_init_admin_phase_generate_data(
-            tree_depth, eid_bits, public_keys_blobs,
-            eid_blob,
-            rt_blob, merkle_tree_blob);
+    process_encrypted_input_mode_init_admin_phase_generate_data(tree_depth, eid_bits, public_keys_blobs, eid_blob,
+                                                                rt_blob, merkle_tree_blob);
 
     *eid_out = blob_to_buffer(eid_blob);
     *rt_out = blob_to_buffer(rt_blob);
@@ -116,10 +110,9 @@ void init_election(std::size_t tree_depth, std::size_t eid_bits,
 }
 
 void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t voter_idx, std::size_t vote,
-                   const buffer<char> *const merkle_tree_buffer,
-                   const buffer<char> *const rt_buffer, const buffer<char> *const eid_buffer,
-                   const buffer<char> *const sk_buffer, const buffer<char> *const pk_eid_buffer,
-                   const buffer<char> *const r1cs_proving_key_buffer,
+                   const buffer<char> *const merkle_tree_buffer, const buffer<char> *const rt_buffer,
+                   const buffer<char> *const eid_buffer, const buffer<char> *const sk_buffer,
+                   const buffer<char> *const pk_eid_buffer, const buffer<char> *const r1cs_proving_key_buffer,
                    const buffer<char> *const r1cs_verification_key_buffer, buffer<char> *const proof_buffer_out,
                    buffer<char> *const pinput_buffer_out, buffer<char> *const ct_buffer_out,
                    buffer<char> *const sn_buffer_out) {
@@ -143,7 +136,8 @@ void generate_vote(std::size_t tree_depth, std::size_t eid_bits, std::size_t vot
 
     logln("Finished conversion of merkle_tree,rt,eid,sk,pk_eid,proving_key,verification_key from buffer to blob");
 
-    process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, merkle_tree_blob, rt_blob, eid_blob, sk_blob, pk_eid_blob, proving_key_blob, verification_key_blob,
+    process_encrypted_input_mode_vote_phase(tree_depth, eid_bits, voter_idx, vote, merkle_tree_blob, rt_blob, eid_blob,
+                                            sk_blob, pk_eid_blob, proving_key_blob, verification_key_blob,
                                             proof_blob_out, pinput_blob_out, ct_blob_out, sn_blob_out);
 
     *proof_buffer_out = blob_to_buffer(proof_blob_out);
@@ -158,54 +152,50 @@ void tally_votes(std::size_t tree_depth,
                  const buffer<char> *const pk_crs_buffer,
                  const buffer<char> *const vk_crs_buffer,
                  const buffer<buffer<char> *const> *const cts_super_buffer,
-buffer<char> *const dec_proof_buffer_out,
-        buffer<char> *const voting_res_buffer_out) {
+                 buffer<char> *const dec_proof_buffer_out,
+                 buffer<char> *const voting_res_buffer_out) {
 
-std::vector<std::uint8_t> sk_eid_blob = buffer_to_blob(sk_eid_buffer);
-std::vector<std::uint8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
-std::vector<std::uint8_t> pk_crs_blob = buffer_to_blob(pk_crs_buffer);
-std::vector<std::uint8_t> vk_crs_blob = buffer_to_blob(vk_crs_buffer);
-std::vector<std::vector<std::uint8_t>> cts_blobs = super_buffer_to_blobs(cts_super_buffer);
+    std::vector<std::uint8_t> sk_eid_blob = buffer_to_blob(sk_eid_buffer);
+    std::vector<std::uint8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
+    std::vector<std::uint8_t> pk_crs_blob = buffer_to_blob(pk_crs_buffer);
+    std::vector<std::uint8_t> vk_crs_blob = buffer_to_blob(vk_crs_buffer);
+    std::vector<std::vector<std::uint8_t>> cts_blobs = super_buffer_to_blobs(cts_super_buffer);
 
-logln("tally votes finished converting from buffers to blobs" );
+    logln("tally votes finished converting from buffers to blobs");
 
-std::vector<std::uint8_t> dec_proof_blob;
-std::vector<std::uint8_t> voting_res_blob;
+    std::vector<std::uint8_t> dec_proof_blob;
+    std::vector<std::uint8_t> voting_res_blob;
 
-process_encrypted_input_mode_tally_admin_phase(tree_depth, cts_blobs, sk_eid_blob,
-                                               vk_eid_blob, pk_crs_blob, vk_crs_blob, dec_proof_blob,
-                                               voting_res_blob);
-logln("tally votes begin blobs to buffers conversion" );
+    process_encrypted_input_mode_tally_admin_phase(tree_depth, cts_blobs, sk_eid_blob, vk_eid_blob, pk_crs_blob,
+                                                   vk_crs_blob, dec_proof_blob, voting_res_blob);
+    logln("tally votes begin blobs to buffers conversion");
 
-*dec_proof_buffer_out = blob_to_buffer(dec_proof_blob);
-*voting_res_buffer_out = blob_to_buffer(voting_res_blob);
-logln("tally votes finished blobs to buffers conversion" );
-
+    *dec_proof_buffer_out = blob_to_buffer(dec_proof_blob);
+    *voting_res_buffer_out = blob_to_buffer(voting_res_blob);
+    logln("tally votes finished blobs to buffers conversion");
 }
 
 bool verify_tally(std::size_t tree_depth,
                   const buffer<buffer<char> *const> *const cts_super_buffer,
-const buffer<char> *const vk_eid_buffer,
-const buffer<char> *const pk_crs_buffer,
-const buffer<char> *const vk_crs_buffer,
-        buffer<char> *const dec_proof_buffer,
-buffer<char> *const voting_res_buffer
-) {
-std::vector<std::uint8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
-std::vector<std::uint8_t> pk_crs_blob = buffer_to_blob(pk_crs_buffer);
-std::vector<std::uint8_t> vk_crs_blob = buffer_to_blob(vk_crs_buffer);
-std::vector<std::uint8_t> dec_proof_blob = buffer_to_blob(dec_proof_buffer);
-std::vector<std::uint8_t> voting_res_blob = buffer_to_blob(voting_res_buffer);
-std::vector<std::vector<std::uint8_t>> cts_blobs = super_buffer_to_blobs(cts_super_buffer);
+                  const buffer<char> *const vk_eid_buffer,
+                  const buffer<char> *const pk_crs_buffer,
+                  const buffer<char> *const vk_crs_buffer,
+                  buffer<char> *const dec_proof_buffer,
+                  buffer<char> *const voting_res_buffer) {
+    std::vector<std::uint8_t> vk_eid_blob = buffer_to_blob(vk_eid_buffer);
+    std::vector<std::uint8_t> pk_crs_blob = buffer_to_blob(pk_crs_buffer);
+    std::vector<std::uint8_t> vk_crs_blob = buffer_to_blob(vk_crs_buffer);
+    std::vector<std::uint8_t> dec_proof_blob = buffer_to_blob(dec_proof_buffer);
+    std::vector<std::uint8_t> voting_res_blob = buffer_to_blob(voting_res_buffer);
+    std::vector<std::vector<std::uint8_t>> cts_blobs = super_buffer_to_blobs(cts_super_buffer);
 
-logln("verify tally finished converting from buffers to blobs" );
+    logln("verify tally finished converting from buffers to blobs");
 
-bool is_tally_valid = process_encrypted_input_mode_tally_voter_phase(tree_depth, cts_blobs, vk_eid_blob, pk_crs_blob, vk_crs_blob, voting_res_blob,
-                                                                     dec_proof_blob);
+    bool is_tally_valid = process_encrypted_input_mode_tally_voter_phase(
+        tree_depth, cts_blobs, vk_eid_blob, pk_crs_blob, vk_crs_blob, voting_res_blob, dec_proof_blob);
 
-logln((is_tally_valid ? "tally is valid": "tally is invalid"));
+    logln((is_tally_valid ? "tally is valid" : "tally is invalid"));
 
-return is_tally_valid;
+    return is_tally_valid;
 }
-
 }

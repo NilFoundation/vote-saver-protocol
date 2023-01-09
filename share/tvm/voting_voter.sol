@@ -137,6 +137,7 @@ contract SaverVoter is IVoter {
         tvm.accept();
         return m_ballot.vi[m_ballot.rt_begin:];
     }
+    
     // ============================================
 
     function get_vi_len() public view checkOwnerAndAccept returns (uint) {

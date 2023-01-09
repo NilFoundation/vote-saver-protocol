@@ -30,16 +30,20 @@ contract SaverAdmin is IAdmin {
     // ============================================
     // Pre-initialization of the zk-SNARK keys
     // ============================================
-    function update_crs(bytes pk, bytes vk) public checkOwnerAndAccept {
+    function update_crs_pk(bytes pk) public checkOwnerAndAccept {
         reset_context();
-        m_crs.pk.append(pk);
-        m_crs.vk.append(vk);
+        m_crs_pk.push(pk);
+    }
+
+    function update_crs_vk(bytes vk) public checkOwnerAndAccept {
+        reset_context();
+        m_crs_vk.push(vk);
     }
 
     function reset_crs() public checkOwnerAndAccept {
         reset_context();
-        m_crs.pk = hex"";
-        m_crs.vk = hex"";
+        m_crs_pk = new bytes[](0);
+        m_crs_vk = new bytes[](0);
     }
     // ============================================
 
@@ -121,7 +125,7 @@ contract SaverAdmin is IAdmin {
         else {
             m_session_state.voter_map_accepted.replace(msg.sender, true);
         }
-        return result_status;
+        return {value: 0, bounce: false, flag: 64}result_status;
     }
     // ============================================
 
@@ -132,7 +136,7 @@ contract SaverAdmin is IAdmin {
     function uncommit_ballot() external checkSenderIsVoter responsible override returns (int32) {
         m_voter_msg_accepted = 2;
         m_session_state.voter_map_accepted.replace(msg.sender, false);
-        return 0;
+        return {value: 0, bounce: false, flag: 64}0;
     }
     // ============================================
 
@@ -161,23 +165,27 @@ contract SaverAdmin is IAdmin {
         // See description above
 //        require(is_tally_ready(), 108);
         m_is_tally_committed = false;
-        m_session_state.ct_sum = hex"";
-        m_session_state.m_sum = hex"";
-        m_session_state.dec_proof = hex"";
+        m_session_state.ct_sum = new bytes[](0);
+        m_session_state.m_sum = new bytes[](0);
+        m_session_state.dec_proof = new bytes[](0);
     }
 
-    function update_tally(bytes ct_sum, bytes m_sum, bytes dec_proof) public checkOwnerAndAccept {
-        // See description above
-//        require(is_tally_ready(), 108);
+    function update_tally_ct_sum(bytes ct_sum) public checkOwnerAndAccept {
         m_is_tally_committed = false;
-        m_session_state.ct_sum.append(ct_sum);
-        m_session_state.m_sum.append(m_sum);
-        m_session_state.dec_proof.append(dec_proof);
+        m_session_state.ct_sum.push(ct_sum);
+    }
+
+    function update_tally_m_sum(bytes m_sum) public checkOwnerAndAccept {
+        m_is_tally_committed = false;
+        m_session_state.m_sum.push(m_sum);
+    }
+
+    function update_tally_dec_proof(bytes dec_proof) public checkOwnerAndAccept {
+        m_is_tally_committed = false;
+        m_session_state.dec_proof.push(dec_proof);
     }
 
     function commit_tally() public checkOwnerAndAccept {
-        // See description above
-//        require(is_tally_ready(), 108);
         m_is_tally_committed = true;
     }
     // ============================================
@@ -185,56 +193,47 @@ contract SaverAdmin is IAdmin {
     // ============================================
     // Getters available to all participants
     // ============================================
-    function get_crs_pk() public view returns (bytes) {
-        tvm.accept();
-        return m_crs.pk;
+    function get_crs_pk() public view returns (bytes[]) {
+        return m_crs_pk;
     }
 
-    function get_crs_vk() public view returns (bytes) {
-        tvm.accept();
-        return m_crs.vk;
+    function get_crs_vk() public view returns (bytes[]) {
+        return m_crs_vk;
     }
 
     function get_voters_addresses() public view returns (address[]) {
-        tvm.accept();
         return m_session_state.voters_addresses;
     }
 
     function get_pk_eid() public view returns (bytes) {
-        tvm.accept();
         return m_session_state.pk_eid;
     }
 
     function get_vk_eid() public view returns (bytes) {
-        tvm.accept();
         return m_session_state.vk_eid;
     }
 
     function get_eid() public view returns (bytes) {
-        tvm.accept();
         return m_eid;
     }
 
     function get_rt() public view returns (bytes) {
-        tvm.accept();
         return m_session_state.rt;
     }
 
-    function get_ct_sum() public view returns (bytes) {
-        tvm.accept();
-        require(m_is_tally_committed, 110);
+    function get_m_is_tally_committed() public view returns (bool) {
+        return m_is_tally_committed;
+    }
+
+    function get_ct_sum() public view returns (bytes[]) {
         return m_session_state.ct_sum;
     }
 
-    function get_m_sum() public view returns (bytes) {
-        tvm.accept();
-        require(m_is_tally_committed, 110);
+    function get_m_sum() public view returns (bytes[]) {
         return m_session_state.m_sum;
     }
 
-    function get_dec_proof() public view returns (bytes) {
-        tvm.accept();
-        require(m_is_tally_committed, 110);
+    function get_dec_proof() public view returns (bytes[]) {
         return m_session_state.dec_proof;
     }
     // ============================================
@@ -261,7 +260,8 @@ contract SaverAdmin is IAdmin {
     }
 
     bytes public m_eid;
-    SharedStructs.CRS public m_crs;
+    bytes[] public m_crs_pk;
+    bytes[] public m_crs_vk;
     SharedStructs.SessionState public m_session_state;
     mapping(bytes => optional(bool))  m_all_eid;
     mapping(bytes => optional(bool))  m_all_sn;

@@ -1,6 +1,6 @@
 {
 	"ABI version": 2,
-	"version": "2.2",
+	"version": "2.3",
 	"header": ["time"],
 	"functions": [
 		{
@@ -11,9 +11,16 @@
 			]
 		},
 		{
-			"name": "update_crs",
+			"name": "update_crs_pk",
 			"inputs": [
-				{"name":"pk","type":"bytes"},
+				{"name":"pk","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "update_crs_vk",
+			"inputs": [
 				{"name":"vk","type":"bytes"}
 			],
 			"outputs": [
@@ -34,13 +41,34 @@
 			]
 		},
 		{
-			"name": "init_voting_session",
+			"name": "set_eid",
 			"inputs": [
 				{"name":"eid","type":"bytes"},
 				{"name":"pk_eid","type":"bytes"},
-				{"name":"vk_eid","type":"bytes"},
-				{"name":"voters_addresses","type":"address[]"},
+				{"name":"vk_eid","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "set_rt",
+			"inputs": [
 				{"name":"rt","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "add_voters",
+			"inputs": [
+				{"name":"voters_addresses","type":"address[]"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "init_voting_session",
+			"inputs": [
 			],
 			"outputs": [
 			]
@@ -73,10 +101,24 @@
 			]
 		},
 		{
-			"name": "update_tally",
+			"name": "update_tally_ct_sum",
 			"inputs": [
-				{"name":"ct_sum","type":"bytes"},
-				{"name":"m_sum","type":"bytes"},
+				{"name":"ct_sum","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "update_tally_m_sum",
+			"inputs": [
+				{"name":"m_sum","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "update_tally_dec_proof",
+			"inputs": [
 				{"name":"dec_proof","type":"bytes"}
 			],
 			"outputs": [
@@ -94,7 +136,7 @@
 			"inputs": [
 			],
 			"outputs": [
-				{"name":"value0","type":"bytes"}
+				{"name":"value0","type":"bytes[]"}
 			]
 		},
 		{
@@ -102,7 +144,7 @@
 			"inputs": [
 			],
 			"outputs": [
-				{"name":"value0","type":"bytes"}
+				{"name":"value0","type":"bytes[]"}
 			]
 		},
 		{
@@ -146,11 +188,19 @@
 			]
 		},
 		{
+			"name": "get_m_is_tally_committed",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bool"}
+			]
+		},
+		{
 			"name": "get_ct_sum",
 			"inputs": [
 			],
 			"outputs": [
-				{"name":"value0","type":"bytes"}
+				{"name":"value0","type":"bytes[]"}
 			]
 		},
 		{
@@ -158,7 +208,7 @@
 			"inputs": [
 			],
 			"outputs": [
-				{"name":"value0","type":"bytes"}
+				{"name":"value0","type":"bytes[]"}
 			]
 		},
 		{
@@ -166,7 +216,7 @@
 			"inputs": [
 			],
 			"outputs": [
-				{"name":"value0","type":"bytes"}
+				{"name":"value0","type":"bytes[]"}
 			]
 		},
 		{
@@ -218,11 +268,19 @@
 			]
 		},
 		{
-			"name": "m_crs",
+			"name": "m_crs_pk",
 			"inputs": [
 			],
 			"outputs": [
-				{"components":[{"name":"pk","type":"bytes"},{"name":"vk","type":"bytes"}],"name":"m_crs","type":"tuple"}
+				{"name":"m_crs_pk","type":"bytes[]"}
+			]
+		},
+		{
+			"name": "m_crs_vk",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_crs_vk","type":"bytes[]"}
 			]
 		},
 		{
@@ -230,7 +288,7 @@
 			"inputs": [
 			],
 			"outputs": [
-				{"components":[{"name":"voters_number","type":"uint256"},{"name":"pk_eid","type":"bytes"},{"name":"vk_eid","type":"bytes"},{"name":"voters_addresses","type":"address[]"},{"name":"voter_map_accepted","type":"map(address,bool)"},{"name":"rt","type":"bytes"},{"name":"ct_sum","type":"bytes"},{"name":"m_sum","type":"bytes"},{"name":"dec_proof","type":"bytes"}],"name":"m_session_state","type":"tuple"}
+				{"components":[{"name":"voters_number","type":"uint256"},{"name":"pk_eid","type":"bytes"},{"name":"vk_eid","type":"bytes"},{"name":"voters_addresses","type":"address[]"},{"name":"voter_map_accepted","type":"map(address,bool)"},{"name":"rt","type":"bytes"},{"name":"ct_sum","type":"bytes[]"},{"name":"m_sum","type":"bytes[]"},{"name":"dec_proof","type":"bytes[]"}],"name":"m_session_state","type":"tuple"}
 			]
 		}
 	],
@@ -243,11 +301,13 @@
 		{"name":"_timestamp","type":"uint64"},
 		{"name":"_constructorFlag","type":"bool"},
 		{"name":"m_eid","type":"bytes"},
-		{"components":[{"name":"pk","type":"bytes"},{"name":"vk","type":"bytes"}],"name":"m_crs","type":"tuple"},
-		{"components":[{"name":"voters_number","type":"uint256"},{"name":"pk_eid","type":"bytes"},{"name":"vk_eid","type":"bytes"},{"name":"voters_addresses","type":"address[]"},{"name":"voter_map_accepted","type":"map(address,bool)"},{"name":"rt","type":"bytes"},{"name":"ct_sum","type":"bytes"},{"name":"m_sum","type":"bytes"},{"name":"dec_proof","type":"bytes"}],"name":"m_session_state","type":"tuple"},
+		{"name":"m_crs_pk","type":"bytes[]"},
+		{"name":"m_crs_vk","type":"bytes[]"},
+		{"components":[{"name":"voters_number","type":"uint256"},{"name":"pk_eid","type":"bytes"},{"name":"vk_eid","type":"bytes"},{"name":"voters_addresses","type":"address[]"},{"name":"voter_map_accepted","type":"map(address,bool)"},{"name":"rt","type":"bytes"},{"name":"ct_sum","type":"bytes[]"},{"name":"m_sum","type":"bytes[]"},{"name":"dec_proof","type":"bytes[]"}],"name":"m_session_state","type":"tuple"},
 		{"name":"m_all_eid","type":"optional(cell)"},
 		{"name":"m_all_sn","type":"optional(cell)"},
 		{"name":"m_voter_msg_accepted","type":"uint32"},
-		{"name":"m_is_tally_committed","type":"bool"}
+		{"name":"m_is_tally_committed","type":"bool"},
+		{"name":"m_is_session_initialized","type":"bool"}
 	]
 }

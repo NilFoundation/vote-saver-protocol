@@ -31,9 +31,9 @@ library SharedStructs {
         address[] voters_addresses;
         mapping(address => bool) voter_map_accepted;
         bytes rt;
-        bytes ct_sum;
-        bytes m_sum;
-        bytes dec_proof;
+        bytes[] ct_sum;
+        bytes[] m_sum;
+        bytes[] dec_proof;
     }
 
     function cmp_bytes(bytes a, bytes b) public returns (bool) {
